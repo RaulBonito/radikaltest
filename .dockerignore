@@ -1,0 +1,22 @@
+# Artefactos de compilación
+**/bin
+**/obj
+**/TestBuild
+**/.vs
+**/.vscode
+**/.git
+**/.gitignore
+**/*.user
+**/*.suo
+
+# Cachés regenerables: no hacen falta en la imagen
+App_Data/flags
+App_Data/media
+App_Data/official-media
+App_Data/shared-ratings.json
+App_Data/chat
+App_Data/**/*.tmp
+App_Data/**/*.bak
+
+# Documentación y logs locales
+**/*.log

@@ -1,0 +1,137 @@
+/* =====================================================================
+   TEMA OSCURO — cobertura de todos los componentes claros
+   Se carga después de refine.css.
+   ===================================================================== */
+
+/* ---------- Carrito ---------- */
+html[data-theme="dark"] .cart-line,
+html[data-theme="dark"] .cart-summary,
+html[data-theme="dark"] .cart-empty,
+html[data-theme="dark"] .cart-line-placeholder,
+html[data-theme="dark"] .qty-stepper,
+html[data-theme="dark"] .cart-lines-note,
+html[data-theme="dark"] .cart-summary-trust,
+html[data-theme="dark"] .cart-summary-head {
+    background: var(--surface);
+    border-color: var(--line);
+    color: var(--text);
+}
+html[data-theme="dark"] .cart-line-media,
+html[data-theme="dark"] .cart-line-placeholder { background: var(--surface-2); }
+html[data-theme="dark"] .qty-stepper { background: var(--surface-2); }
+html[data-theme="dark"] .qty-stepper button { color: var(--text-soft); background: transparent; }
+html[data-theme="dark"] .qty-stepper button:hover { background: var(--surface-3); color: var(--text); }
+html[data-theme="dark"] .cart-summary-total { border-top-color: var(--line); }
+html[data-theme="dark"] .cart-line-total,
+html[data-theme="dark"] .cart-summary-total strong { color: var(--text); }
+
+/* ---------- Mi área ---------- */
+html[data-theme="dark"] .player-tabs { background: var(--surface); border-color: var(--line); }
+html[data-theme="dark"] .player-tab { color: var(--muted); background: transparent; }
+html[data-theme="dark"] .player-tab:hover { color: var(--text); background: var(--surface-2); }
+
+html[data-theme="dark"] .info-card,
+html[data-theme="dark"] .player-side .info-card,
+html[data-theme="dark"] .metrics-panel,
+html[data-theme="dark"] .metrics-grid-inner,
+html[data-theme="dark"] .form-section,
+html[data-theme="dark"] .stat-mode-card,
+html[data-theme="dark"] .metric-chip,
+html[data-theme="dark"] .metric-tile,
+html[data-theme="dark"] .quick-links a,
+html[data-theme="dark"] .point-row,
+html[data-theme="dark"] .award-row,
+html[data-theme="dark"] .readonly-value,
+html[data-theme="dark"] .guest-benefit,
+html[data-theme="dark"] .login-panel,
+html[data-theme="dark"] .login-panel.card {
+    background: var(--surface);
+    border-color: var(--line);
+    color: var(--text);
+}
+html[data-theme="dark"] .quick-links a:hover { background: var(--surface-2); color: var(--text); }
+html[data-theme="dark"] .readonly-value { background: var(--surface-2); color: var(--text-soft); }
+html[data-theme="dark"] .info-card dt,
+html[data-theme="dark"] .info-card h4 { color: var(--muted); }
+html[data-theme="dark"] .info-card dd { color: var(--text); }
+html[data-theme="dark"] .premium-card { background: radial-gradient(400px 180px at 100% 0%, rgba(255, 47, 154, 0.12), transparent 65%), var(--surface); border-color: rgba(255, 47, 154, 0.28); }
+html[data-theme="dark"] .premium-points { background: rgba(184, 134, 47, 0.14); border-color: rgba(184, 134, 47, 0.35); color: #f2d79b; }
+html[data-theme="dark"] .subscription-card { background: radial-gradient(500px 200px at 0% 0%, rgba(184, 134, 47, 0.12), transparent 65%), var(--surface); border-color: rgba(184, 134, 47, 0.3); }
+html[data-theme="dark"] .win-ring > div { background: var(--surface); }
+html[data-theme="dark"] .win-ring strong { color: var(--text); }
+html[data-theme="dark"] .win-ring span { color: var(--muted); }
+html[data-theme="dark"] .demo-banner,
+html[data-theme="dark"] .connected-banner { background: var(--surface-2); border-color: var(--line); color: var(--text-soft); }
+
+/* ---------- Coach Radikal ---------- */
+html[data-theme="dark"] .coach-insight { background: var(--surface); border-color: var(--line); }
+html[data-theme="dark"] .coach-insight-tag { background: var(--brand-soft); color: var(--brand); }
+html[data-theme="dark"] .coach-insight h3 { color: var(--text); }
+html[data-theme="dark"] .coach-insight p { color: var(--muted); }
+html[data-theme="dark"] .coach-chat { background: linear-gradient(160deg, rgba(0, 166, 217, 0.08), var(--surface) 60%); border-color: var(--line); }
+html[data-theme="dark"] .coach-suggestions button { background: var(--surface-2); border-color: var(--line); color: var(--muted); }
+html[data-theme="dark"] .coach-suggestions button:hover { background: var(--surface-3); color: var(--text); }
+
+/* ---------- Official Players ---------- */
+html[data-theme="dark"] .official-tier,
+html[data-theme="dark"] .official-tier-all {
+    background: var(--surface);
+    border-color: var(--line);
+    color: var(--text);
+}
+html[data-theme="dark"] .official-tier:hover,
+html[data-theme="dark"] .official-tier-all:hover { border-color: var(--brand); background: var(--surface-2); }
+html[data-theme="dark"] .official-tier.active { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+html[data-theme="dark"] .official-tier strong { color: var(--text); }
+html[data-theme="dark"] .official-tier.active strong { color: var(--brand); }
+
+/* ---------- Modales, varios y utilidades ---------- */
+html[data-theme="dark"] .modal-body .info-card { background: var(--surface-2); border-color: var(--line); }
+html[data-theme="dark"] .diana-label { background: var(--surface); border-color: var(--line); color: var(--text-soft); }
+html[data-theme="dark"] .round-nav-player { background: var(--surface-2); border-color: var(--line); color: var(--text-soft); }
+html[data-theme="dark"] .detail-hero { background: var(--surface); border-color: var(--line); color: var(--text); }
+html[data-theme="dark"] .map-sidebar { background: var(--surface); }
+html[data-theme="dark"] .toast { background: var(--surface); color: var(--text); border-color: var(--line); }
+html[data-theme="dark"] .toast.success { background: rgba(6, 118, 71, 0.22); color: #b7f7d4; border-color: rgba(6, 118, 71, 0.45); }
+html[data-theme="dark"] .toast.error { background: rgba(180, 35, 24, 0.22); color: #ffc9c9; border-color: rgba(180, 35, 24, 0.45); }
+html[data-theme="dark"] .error-box { background: rgba(180, 35, 24, 0.14); border-color: rgba(180, 35, 24, 0.4); color: #ffb4ab; }
+html[data-theme="dark"] .login-error { background: rgba(180, 35, 24, 0.14); border-color: rgba(180, 35, 24, 0.4); color: #ffb4ab; }
+html[data-theme="dark"] .empty-state { background: var(--surface); border-color: var(--line); }
+html[data-theme="dark"] .product-image { background: var(--surface-3); }
+html[data-theme="dark"] .badge-outline { border-color: var(--line-strong); color: var(--text-soft); }
+html[data-theme="dark"] .badge-member { background: rgba(255, 47, 154, 0.18); color: #ffd0ea; border-color: rgba(255, 47, 154, 0.38); }
+html[data-theme="dark"] .chip-soft { background: var(--surface-3); border-color: var(--line); color: var(--text-soft); }
+
+/* Grabaciones y diana */
+html[data-theme="dark"] .recordings-tabs { background: var(--surface); border-color: var(--line); }
+html[data-theme="dark"] .recordings-tab { background: transparent; color: var(--text-soft); }
+html[data-theme="dark"] .recordings-tab:hover { background: var(--surface-2); color: var(--text); }
+html[data-theme="dark"] .recordings-tab.is-active { background: linear-gradient(135deg, #00a6d9, #0b5f86); color: #fff; }
+html[data-theme="dark"] .recording-grid .recording-card { background: var(--surface); border-color: var(--line); }
+html[data-theme="dark"] .recording-top .small { color: var(--muted); }
+html[data-theme="dark"] .archive-card-preview { background: radial-gradient(circle at 40% 30%, rgba(0, 166, 217, 0.16), transparent 65%), var(--surface-2); }
+html[data-theme="dark"] .archive-preview-empty { border-color: var(--line-strong); color: var(--muted); }
+html[data-theme="dark"] .dart-round-open { background: var(--surface); border-color: var(--line); color: var(--text-soft); }
+html[data-theme="dark"] .dart-round-open:hover { border-color: var(--brand); color: var(--brand); }
+html[data-theme="dark"] .dart-round.is-active .dart-round-open { background: var(--brand-soft); border-color: rgba(0, 166, 217, 0.45); color: var(--brand); }
+html[data-theme="dark"] .dart-turn { background: var(--surface-2); border-color: var(--line); }
+html[data-theme="dark"] .darts-board-card,
+html[data-theme="dark"] .darts-turns-card { background: var(--surface); border-color: var(--line); }
+html[data-theme="dark"] .darts-stat { background: var(--surface); border-color: var(--line); }
+html[data-theme="dark"] .round-nav { background: linear-gradient(160deg, rgba(0, 166, 217, 0.06), var(--surface) 70%); border-color: var(--line); }
+html[data-theme="dark"] .round-summary { background: var(--surface-2); border-color: var(--line-strong); }
+html[data-theme="dark"] .skeleton { background: linear-gradient(90deg, #14212e 25%, #1b2b3a 37%, #14212e 63%); background-size: 400% 100%; }
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] input[type="text"],
+html[data-theme="dark"] input[type="email"],
+html[data-theme="dark"] input[type="tel"],
+html[data-theme="dark"] input[type="password"],
+html[data-theme="dark"] input[type="search"],
+html[data-theme="dark"] textarea { background: var(--surface-2); border-color: var(--line); color: var(--text); }
+html[data-theme="dark"] .form-select option { background: var(--surface); color: var(--text); }
+html[data-theme="dark"] .checkbox-row { color: var(--text-soft); }
+html[data-theme="dark"] .data-table,
+html[data-theme="dark"] .acta-table { background: var(--surface); color: var(--text); }
+html[data-theme="dark"] .acta-team { background: var(--surface-2); border-color: var(--line); color: var(--text); }
+html[data-theme="dark"] .bracket-panel { background: #050c14; }

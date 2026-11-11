@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AngleSharp" Version="1.10.1" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Datos de ejemplo que se copian a APP_DATA_PATH en el primer arranque.
+         No se publican shared-ratings.json ni chats locales. -->
+    <Content Update="App_Data\live-recordings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Remove="App_Data\shared-ratings.json" />
+    <Content Remove="App_Data\chat\**\*.json" />
+  </ItemGroup>
+
+</Project>

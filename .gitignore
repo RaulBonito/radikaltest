@@ -1,0 +1,111 @@
+# =====================================================================
+# .NET / compilación
+# =====================================================================
+bin/
+obj/
+TestBuild/
+publish/
+artifacts/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.slnLaunch.user
+*.csproj.user
+*.DotSettings.user
+*.VC.db
+*.VC.opendb
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =====================================================================
+# NuGet
+# =====================================================================
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+project.lock.json
+project.assets.json
+*.nuget.g.props
+*.nuget.g.targets
+*.nuget.dgspec.json
+*.nuget.props
+*.nuget.targets
+
+# =====================================================================
+# Publicación / perfiles locales
+# =====================================================================
+**/Properties/PublishProfiles/
+*.pubxml
+*.pubxml.user
+*.publishproj
+
+# =====================================================================
+# Tests y cobertura
+# =====================================================================
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+*.trx
+*.coverage.*
+lcov.info
+
+# =====================================================================
+# Sistema operativo / editores
+# =====================================================================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.stackdump
+
+# =====================================================================
+# Logs
+# =====================================================================
+*.log
+*.log.*
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =====================================================================
+# Secretos y configuración local
+# =====================================================================
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+appsettings.*.local.json
+appsettings.Production.json
+secrets.json
+*.pfx
+*.p12
+*.key
+*.pem
+
+# =====================================================================
+# Datos generados en tiempo de ejecución
+# Se versiona App_Data/live-recordings.json como semilla de ejemplo.
+# =====================================================================
+App_Data/flags/
+App_Data/media/
+App_Data/official-media/
+App_Data/chat/
+App_Data/shared-ratings.json
+App_Data/**/*.tmp
+App_Data/**/*.bak
+App_Data/**/*.log
+
+# =====================================================================
+# Docker / Render local
+# =====================================================================
+.docker/
+docker-compose.override.yml

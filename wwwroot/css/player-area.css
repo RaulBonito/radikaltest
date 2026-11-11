@@ -1,0 +1,442 @@
+/* =====================================================================
+   Mi Área — cabecera, hero, menú móvil y densidad
+   ===================================================================== */
+
+.player-area-head {
+    align-items: center;
+    margin-bottom: 14px;
+}
+.player-area-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.player-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+.player-hero-actions .btn {
+    min-height: 34px;
+}
+
+@media (max-width: 760px) {
+    .player-area-head {
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    .player-area-head .section-title { display: none; }
+    .player-area-head .kicker { font-size: 0.56rem; }
+    .player-area-actions { gap: 5px; }
+    .player-area-actions .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        min-height: 32px;
+        padding: 0;
+    }
+    .player-area-actions .btn span { display: none; }
+    .player-area-actions .btn svg { width: 15px; height: 15px; }
+
+    /* Menú de secciones: 3 columnas, 2 filas */
+    .player-mobile-menu {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        margin: 9px 0 8px;
+    }
+    .player-mobile-menu-item {
+        flex-direction: column;
+        justify-content: center;
+        gap: 5px;
+        min-height: 64px;
+        padding: 7px 4px;
+        text-align: center;
+    }
+    .player-mobile-menu-item strong {
+        font-size: 0.55rem;
+        letter-spacing: 0.02em;
+    }
+    .player-mobile-menu-icon {
+        width: 28px;
+        height: 28px;
+    }
+    .player-mobile-menu-icon svg { width: 15px; height: 15px; }
+
+    /* Hero compacto */
+    .player-hero {
+        grid-template-columns: 72px minmax(0, 1fr);
+        gap: 10px;
+        padding: 14px;
+        border-radius: 16px;
+    }
+    .player-avatar-xl {
+        width: 72px;
+        height: 72px;
+        padding: 3px;
+    }
+    .player-avatar-xl .avatar-badge {
+        font-size: 0.4rem;
+        padding: 2px 4px;
+    }
+    .player-hero h1 {
+        margin: 3px 0 2px;
+        font-size: 1.45rem;
+    }
+    .player-hero-top { gap: 4px; }
+    .player-hero-top .chip,
+    .player-hero .badge {
+        padding: 3px 6px;
+        font-size: 0.46rem;
+    }
+    .player-hero .player-badges {
+        gap: 4px;
+        margin-top: 5px;
+    }
+    .player-hero-actions {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-top: 2px;
+    }
+    .player-hero-actions .btn {
+        min-height: 32px;
+        padding: 0 8px;
+        font-size: 0.58rem;
+    }
+    .player-hero-side {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px;
+        margin-top: 2px;
+    }
+    .hero-mini-stat {
+        min-width: 0;
+        padding: 6px 6px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    .hero-mini-stat span {
+        font-size: 0.4rem;
+        letter-spacing: 0.05em;
+    }
+    .hero-mini-stat strong {
+        margin-top: 2px;
+        font-size: 0.95rem;
+    }
+    .hero-mini-stat small {
+        margin-top: 2px;
+        font-size: 0.42rem;
+    }
+
+    /* Secciones y estadísticas */
+    .player-section { margin-top: 18px; }
+    .player-section-head {
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    .player-section-title { font-size: 1.05rem; }
+    .player-section-head .kicker { font-size: 0.5rem; }
+    .player-section-head .btn {
+        min-height: 28px;
+        padding: 0 7px;
+        font-size: 0.54rem;
+    }
+
+    .stats-highlight-grid { gap: 8px; }
+    .stat-mode-card {
+        padding: 12px;
+        border-radius: 14px;
+    }
+    .stat-mode-head { margin-bottom: 6px; }
+    .stat-mode-head .chip {
+        padding: 3px 6px;
+        font-size: 0.46rem;
+    }
+    .stat-mode-sub { display: none; }
+    .stat-mode-body { gap: 6px; }
+    .stat-average strong { font-size: 1.8rem; }
+    .stat-average span {
+        margin-top: 2px;
+        font-size: 0.46rem;
+        letter-spacing: 0.05em;
+    }
+    .win-ring {
+        width: 62px;
+        height: 62px;
+        padding: 3px;
+    }
+    .win-ring strong { font-size: 0.78rem; }
+    .win-ring span { font-size: 0.34rem; }
+    .stat-mode-meta {
+        gap: 3px 8px;
+        margin-top: 8px;
+        padding-top: 8px;
+        font-size: 0.54rem;
+    }
+    .stat-mode-meta strong { font-size: 0.62rem; }
+    .stats-overview .metric-chips { display: none; }
+    .metric-chips { gap: 4px; margin-top: 8px; }
+    .metric-chip { padding: 4px 6px; }
+    .metric-chip small { font-size: 0.42rem; }
+    .metric-chip strong { font-size: 0.64rem; }
+
+    /* Columnas, puntos y tarjetas */
+    .player-columns {
+        gap: 12px;
+        margin-top: 18px;
+    }
+    .player-side { gap: 8px; }
+    .info-card { padding: 12px; }
+    .info-card h4 { font-size: 0.54rem; }
+    .premium-points {
+        margin: 10px 0;
+        padding: 8px 10px;
+    }
+    .premium-points strong { font-size: 1rem; }
+    .quick-links a {
+        padding: 6px 8px;
+        font-size: 0.7rem;
+    }
+    .points-list { gap: 4px; }
+    .point-row {
+        gap: 6px 10px;
+        padding: 8px 10px;
+    }
+    .point-date { font-size: 0.56rem; }
+    .point-concept strong { font-size: 0.7rem; }
+    .point-concept span { font-size: 0.54rem; }
+    .point-amount { font-size: 0.8rem; }
+    .comp-grid { gap: 8px; }
+    .comp-card {
+        min-height: 0;
+        padding: 14px;
+        border-radius: 14px;
+    }
+    .comp-name { font-size: 0.9rem; }
+    .comp-meta,
+    .comp-footer { font-size: 0.58rem; }
+
+    /* Coach: carrusel horizontal */
+    .coach-layout { gap: 10px; }
+    .coach-insights {
+        flex-direction: row;
+        gap: 8px;
+        padding-bottom: 4px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+    }
+    .coach-insight {
+        min-width: 250px;
+        max-width: 86%;
+        padding: 11px 12px;
+        scroll-snap-align: start;
+    }
+    .coach-insight h3 { font-size: 0.8rem; }
+    .coach-insight p { font-size: 0.66rem; }
+    .coach-chat { padding: 12px; }
+    .coach-messages {
+        min-height: 80px;
+        max-height: 140px;
+    }
+    .coach-message {
+        padding: 7px 9px;
+        font-size: 0.64rem;
+    }
+    .coach-suggestions button {
+        padding: 4px 7px;
+        font-size: 0.52rem;
+    }
+    .coach-form .form-control {
+        min-height: 34px;
+        font-size: 0.66rem;
+    }
+
+    /* Mis datos / items */
+    .profile-top-card {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        grid-template-columns: none;
+        gap: 14px;
+        padding: 14px;
+        text-align: left;
+    }
+    .profile-photo-block {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 12px;
+        min-width: 0;
+        width: 100%;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--line);
+    }
+    .profile-avatar-xl {
+        flex: 0 0 auto;
+        width: 64px;
+        height: 64px;
+    }
+    .profile-photo-meta {
+        align-items: flex-start;
+        gap: 4px;
+        min-width: 0;
+    }
+    .profile-photo-btn {
+        min-height: 32px;
+        padding: 0 10px;
+        font-size: 0.58rem;
+    }
+    .profile-photo-block small { display: block; font-size: 0.52rem; text-align: left; }
+    .profile-alias-form {
+        width: 100%;
+        text-align: left;
+    }
+    .profile-alias-form .kicker {
+        justify-content: flex-start;
+        font-size: 0.54rem;
+    }
+    .profile-alias-form h3 {
+        margin: 2px 0 10px;
+        font-size: 0.95rem;
+    }
+    .profile-alias-form .login-label {
+        display: block;
+        margin-bottom: 4px;
+        text-align: left;
+    }
+    .profile-alias-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 8px;
+    }
+    .profile-alias-row .form-control {
+        width: 100%;
+        height: 38px;
+        min-width: 0;
+    }
+    .profile-alias-row .btn {
+        width: auto;
+        min-height: 38px;
+        font-size: 0.58rem;
+        padding: 0 10px;
+    }
+    .profile-alias-form p {
+        margin-top: 6px;
+        text-align: left;
+    }
+    .form-section { padding: 13px; }
+    .form-section h3 {
+        margin-bottom: 8px;
+        font-size: 0.82rem;
+    }
+    .form-grid { gap: 8px; }
+    .data-layout { gap: 10px; }
+    .player-items-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+    .player-item { border-radius: 12px; }
+    .player-item-body { padding: 8px; }
+    .player-item-body h3 { font-size: 0.66rem; }
+    .player-item-actions .btn {
+        min-height: 28px;
+        font-size: 0.52rem;
+    }
+    .items-toolbar { gap: 8px; }
+    .items-filter {
+        padding: 4px 7px;
+        font-size: 0.52rem;
+    }
+    .items-filter span { font-size: 0.46rem; }
+
+    /* Invitado: login primero y sin bloques redundantes */
+    .player-guest {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding-top: 4px;
+    }
+    .player-guest .login-panel {
+        order: -1;
+        padding: 16px;
+        border-radius: 16px;
+    }
+    .player-guest .guest-benefits,
+    .player-guest .login-trust,
+    .player-guest .guest-info-section {
+        display: none;
+    }
+    .player-guest .section-title { font-size: 1.35rem !important; }
+    .player-guest .section-sub {
+        display: block;
+        font-size: 0.68rem;
+        line-height: 1.4;
+    }
+    .player-guest .login-brand img { height: 34px; }
+    .player-guest .login-panel h2 { font-size: 1.2rem; }
+    .player-guest .login-panel .btn { min-height: 40px; }
+}
+
+@media (max-width: 760px) {
+    .stats-highlight-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .demo-banner {
+        gap: 8px;
+        margin-bottom: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+    }
+    .demo-banner strong { font-size: 0.72rem; }
+    .demo-banner p {
+        margin-top: 2px;
+        font-size: 0.6rem;
+        line-height: 1.35;
+    }
+    .demo-banner .btn {
+        width: 100%;
+        min-height: 32px;
+        font-size: 0.58rem;
+    }
+    .connected-banner {
+        gap: 6px;
+        padding: 8px 10px;
+        border-radius: 10px;
+    }
+    .connected-banner .muted { display: none; }
+    .connected-banner span { font-size: 0.6rem; }
+}
+
+@media (max-width: 760px) {
+    .guest-info-section { display: none !important; }
+    .player-guest .login-brand { display: none; }
+    .player-guest .login-panel { padding: 14px; }
+    .player-guest .login-panel h2 { margin-bottom: 2px; }
+    .player-guest .login-panel > p.small {
+        margin: 0 0 8px;
+        font-size: 0.62rem;
+    }
+    .player-guest .login-separator { margin: 10px 0; }
+    .player-guest .login-panel .btn {
+        min-height: 38px;
+        font-size: 0.66rem;
+    }
+    .player-guest .login-panel .login-label { margin: 8px 0 4px; }
+    .player-guest .login-panel .form-control { min-height: 40px; }
+}
+
+@media (max-width: 360px) {
+    .profile-alias-row {
+        grid-template-columns: 1fr;
+    }
+    .profile-alias-row .btn {
+        width: 100%;
+    }
+}

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#02080d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Radikal" />
+    <meta name="application-name" content="Radikal Players" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="description" content="Rankings MPR/PPD, competiciones, cuadrantes en directo y el mapa de dianas Radikal. Datos oficiales de Radikal Players." />
+    <title>Radikal Players Experience</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Raleway:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/vendor/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="/vendor/leaflet-markercluster/MarkerCluster.css" />
+    <link rel="stylesheet" href="/vendor/leaflet-markercluster/MarkerCluster.Default.css" />
+    <link rel="stylesheet" href="/css/app.css?v=126" />
+    <link rel="stylesheet" href="/css/theme-light.css?v=126" />
+    <link rel="stylesheet" href="/css/refine.css?v=126" />
+    <link rel="stylesheet" href="/css/dark.css?v=126" />
+    <link rel="stylesheet" href="/css/official.css?v=126" />
+    <link rel="stylesheet" href="/css/items.css?v=126" />
+    <link rel="stylesheet" href="/css/shop.css?v=126" />
+    <link rel="stylesheet" href="/css/replay.css?v=126" />
+    <link rel="stylesheet" href="/css/mobile-live.css?v=126" />
+    <link rel="stylesheet" href="/css/player-area.css?v=126" />
+    <link rel="stylesheet" href="/css/rank-news.css?v=126" />
+    <link rel="stylesheet" href="/css/home-v2.css?v=126" />
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+</head>
+<body>
+    <div class="noise" aria-hidden="true"></div>
+
+    <header class="site-header" id="site-header">
+        <div class="header-inner">
+            <a class="brand" href="#/" aria-label="Radikal Players, inicio">
+                <img class="brand-logo" src="/img/brand/radikalplayers-transparent.png" alt="Radikal Darts Players" />
+            </a>
+
+            <nav class="main-nav" id="main-nav" aria-label="Navegación principal">
+                <div class="nav-drawer-top">
+                    <div class="nav-drawer-brand">
+                        <img src="/img/brand/radikalplayers-transparent.png" alt="" />
+                        <span>Menú</span>
+                    </div>
+                    <button class="nav-drawer-close" id="nav-close" type="button" aria-label="Cerrar menú">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+                    </button>
+                </div>
+
+                <div class="nav-drawer-user" id="nav-user">
+                    <span class="nav-user-avatar is-guest">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>
+                    </span>
+                    <span class="nav-user-info">
+                        <strong>Invitado</strong>
+                        <small>Accede con tu Radikal ID</small>
+                    </span>
+                    <button class="nav-user-action" type="button" id="nav-user-login">Acceder</button>
+                </div>
+
+                <div class="nav-drawer-scroll">
+                    <p class="nav-drawer-label">Explorar</p>
+                    <div class="nav-drawer-links">
+                        <a href="#/" data-nav="home">
+                            <span class="nav-link-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path><path d="M9 21v-6h6v6"></path></svg></span>
+                            <span class="nav-link-copy"><strong>Inicio</strong><small>Accesos rápidos y novedades</small></span>
+                            <span class="nav-link-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span>
+                        </a>
+                        <a href="#/rankings" data-nav="rankings">
+                            <span class="nav-link-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10"></path><path d="M10 20V4"></path><path d="M16 20v-7"></path><path d="M22 20H2"></path></svg></span>
+                            <span class="nav-link-copy"><strong>Rankings</strong><small>PPD, MPR y clasificación</small></span>
+                            <span class="nav-link-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span>
+                        </a>
+                        <a href="#/competiciones" data-nav="competitions">
+                            <span class="nav-link-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"></path><path d="M7 6H4a2 2 0 0 0 2 4h1M17 6h3a2 2 0 0 1-2 4h-1"></path></svg></span>
+                            <span class="nav-link-copy"><strong>Competiciones</strong><small>Ligas, torneos y cuadrantes</small></span>
+                            <span class="nav-link-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span>
+                        </a>
+                        <a href="#/directo" data-nav="live">
+                            <span class="nav-link-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="2"></rect><path d="m8 3 4 3 4-3"></path><path d="m10 10 5 3-5 3v-6Z"></path></svg></span>
+                            <span class="nav-link-copy"><strong>En directo <span class="live-dot" id="nav-live-dot" hidden></span></strong><small>Partidas y resultados al momento</small></span>
+                            <span class="nav-link-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span>
+                        </a>
+                        <a href="#/lugares" data-nav="places">
+                            <span class="nav-link-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg></span>
+                            <span class="nav-link-copy"><strong>Dianas</strong><small>Encuentra tu diana más cercana</small></span>
+                            <span class="nav-link-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span>
+                        </a>
+                    </div>
+
+                    <p class="nav-drawer-label">Comunidad</p>
+                    <div class="nav-drawer-links">
+                        <a href="#/noticias" data-nav="news" class="nav-hide-sm">
+                            <span class="nav-link-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Z"></path><path d="M4 22a2 2 0 0 1-2-2v-9h4"></path><path d="M18 14h-8M15 18h-5"></path><path d="M10 6h8v4h-8V6Z"></path></svg></span>
+                            <span class="nav-link-copy"><strong>Noticias</strong><small>Actualidad Radikal</small></span>
+                            <span class="nav-link-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span>
+                        </a>
+                        <a href="#/official" data-nav="official" class="nav-hide-sm">
+                            <span class="nav-link-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path><path d="m9 12 2 2 4-4"></path></svg></span>
+                            <span class="nav-link-copy"><strong>Official Players</strong><small>Jugadores oficiales</small></span>
+                            <span class="nav-link-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span>
+                        </a>
+                        <a href="#/tienda" data-nav="shop">
+                            <span class="nav-link-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4H6Z"></path><path d="M3 6h18M16 10a4 4 0 0 1-8 0"></path></svg></span>
+                            <span class="nav-link-copy"><strong>Tienda</strong><small>Dardos, fondos y merchandising</small></span>
+                            <span class="nav-link-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span>
+                        </a>
+                        <a href="#/mi-area" data-nav="player">
+                            <span class="nav-link-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg></span>
+                            <span class="nav-link-copy"><strong>Mi área</strong><small>Tu perfil, puntos e historial</small></span>
+                            <span class="nav-link-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-drawer-foot">
+                    <span class="nav-drawer-dot"></span>
+                    <span>Datos oficiales de Radikal Players</span>
+                </div>
+            </nav>
+
+            <div class="header-actions">
+                <div class="country-picker" data-country-picker>
+                    <button class="country-picker-btn" type="button" data-country-toggle
+                            aria-haspopup="listbox" aria-expanded="false" title="País de referencia">
+                        <span class="country-picker-flag" data-country-flag aria-hidden="true">🌍</span>
+                        <span class="country-picker-name" data-country-name>España</span>
+                        <svg class="country-picker-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+                    </button>
+                    <div class="country-menu" data-country-menu role="listbox" aria-label="País de referencia" hidden>
+                        <div class="country-menu-search">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m15.4 15.4 5.1 5.1"></path></svg>
+                            <input type="search" data-country-search placeholder="Buscar país…" autocomplete="off" aria-label="Buscar país" />
+                        </div>
+                        <div class="country-menu-list" data-country-list></div>
+                    </div>
+                </div>
+                <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Cambiar tema" title="Modo oscuro">
+                    <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 2v2.2M12 19.8V22M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2 12h2.2M19.8 12H22M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"></path></svg>
+                    <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.4A8.6 8.6 0 0 1 9.6 3.5a8.6 8.6 0 1 0 10.9 10.9Z"></path></svg>
+                </button>
+                <button class="icon-btn" id="search-open" aria-label="Buscar" title="Buscar (Ctrl+K)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m15.4 15.4 5.1 5.1"></path></svg>
+                </button>
+                <a class="icon-btn cart-link" id="cart-link" href="#/carrito" aria-label="Carrito" title="Carrito">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4H6Z"></path><path d="M3 6h18M16 10a4 4 0 0 1-8 0"></path></svg>
+                    <span class="cart-badge" id="cart-badge" data-cart-count hidden>0</span>
+                </a>
+                <button class="btn btn-ghost hide-mobile" id="login-open" type="button">Acceder</button>
+                <a class="user-chip" id="user-chip" href="#/mi-area" hidden>
+                    <img id="user-chip-photo" alt="" />
+                    <span id="user-chip-alias"></span>
+                </a>
+                <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="main-nav">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="nav-backdrop" data-nav-backdrop aria-hidden="true"></div>
+
+    <main id="app" class="app" tabindex="-1"></main>
+
+    <footer class="site-footer">
+        <div class="container footer-grid">
+            <div class="footer-brand">
+                <a class="brand" href="#/">
+                    <img class="brand-logo brand-logo-sm" src="/img/brand/radikalplayers-transparent.png" alt="Radikal Darts Players" />
+                </a>
+                <p>Rankings, competiciones, cuadrantes en directo y el mapa de dianas Radikal. Datos oficiales de Radikal Players.</p>
+                <p class="footer-note">Proyecto independiente para la comunidad Radikal Darts.</p>
+                <div class="footer-partner">
+                    <span>by</span>
+                    <span class="partner-logo-chip"><img src="/img/brand/radikaldarts.png" alt="Radikal Darts" /></span>
+                </div>
+            </div>
+            <div>
+                <h4>Explorar</h4>
+                <a href="#/rankings">Rankings</a>
+                <a href="#/competiciones">Competiciones</a>
+                <a href="#/directo">En directo</a>
+                <a href="#/lugares">Busca tu diana</a>
+            </div>
+            <div>
+                <h4>Comunidad</h4>
+                <a href="#/noticias">Noticias</a>
+                <a href="#/official">Official Players</a>
+                <a href="#/carrito">Mi carrito</a>
+                <a href="#/mi-area">Mi área de jugador</a>
+                <a href="https://esp.radikalplayers.com/topplaces/" target="_blank" rel="noopener">TOP Places</a>
+                <a href="https://esp.radikalplayers.com/shop/" target="_blank" rel="noopener">Shop</a>
+            </div>
+            <div>
+                <h4>Radikal</h4>
+                <a href="https://www.radikalplayers.com/" target="_blank" rel="noopener">Web oficial</a>
+                <a href="https://www.radikalplayers.com/login.php" target="_blank" rel="noopener">Acceso jugadores</a>
+                <a href="https://www.radikalplayers.com/mobile-app" target="_blank" rel="noopener">App oficial</a>
+                <a href="https://esp.radikalplayers.com/contactofrm.php" target="_blank" rel="noopener">Contacto</a>
+            </div>
+        </div>
+        <div class="container footer-bottom">
+            <span>© <span id="footer-year"></span> Radikal Players Experience · Concepto de producto</span>
+            <span>Hecho con datos en tiempo real de Radikal Players</span>
+        </div>
+    </footer>
+
+    <div class="search-overlay" id="search-overlay" hidden>
+        <div class="search-panel" role="dialog" aria-modal="true" aria-label="Buscar en Radikal Players">
+            <div class="search-head">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m15.4 15.4 5.1 5.1"></path></svg>
+                <input id="global-search" type="search" placeholder="Busca jugadores, ID, competiciones, dianas..." autocomplete="off" />
+                <button class="icon-btn" id="search-close" aria-label="Cerrar búsqueda">Esc</button>
+            </div>
+            <div class="search-body" id="search-results">
+                <p class="search-hint">Escribe al menos 2 caracteres. También puedes usar <kbd>Ctrl</kbd> + <kbd>K</kbd>.</p>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav" id="bottom-nav" aria-label="Navegación inferior">
+        <a href="#/" data-bottom="home">
+            <svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10Z"></path></svg>
+            <span>Inicio</span>
+        </a>
+        <a href="#/rankings" data-bottom="rankings">
+            <svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"></path><path d="M7 6H4a2 2 0 0 0 2 4h1M17 6h3a2 2 0 0 1-2 4h-1"></path></svg>
+            <span>Rankings</span>
+        </a>
+        <a href="#/directo" data-bottom="live" class="bottom-live">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="m10 8 6 4-6 4V8Z"></path></svg>
+            <span>Directo</span>
+            <i class="bottom-live-dot" id="bottom-live-dot" hidden></i>
+        </a>
+        <a href="#/tienda" data-bottom="shop">
+            <svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4H6Z"></path><path d="M3 6h18M16 10a4 4 0 0 1-8 0"></path></svg>
+            <span>Tienda</span>
+            <i class="bottom-nav-count" data-cart-count hidden>0</i>
+        </a>
+        <a href="#/mi-area" data-bottom="player">
+            <svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span>Mi área</span>
+        </a>
+    </nav>
+
+    <div id="toast-root" class="toast-root" aria-live="polite"></div>
+    <div id="modal-root"></div>
+
+    <script src="/vendor/leaflet/leaflet.js"></script>
+    <script src="/vendor/leaflet-markercluster/leaflet.markercluster.js"></script>
+    <script type="module" src="/js/main.js?v=126"></script>
+</body>
+</html>
