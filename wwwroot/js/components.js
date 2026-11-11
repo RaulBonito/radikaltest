@@ -1,7 +1,7 @@
 import {
     esc, icon, typeIcon, statusChip, officialBadge, avatarHtml,
     formatDateRange, formatNumber, initials
-} from "./ui.js?v=77";
+} from "./ui.js?v=78";
 import { countryFlagUrl, countryFallback, countryName } from "./preferences.js?v=77";
 
 const TYPE_THEME = {

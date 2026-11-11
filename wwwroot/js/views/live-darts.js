@@ -1,5 +1,5 @@
-import { api } from "../api.js?v=77";
-import { esc, icon, formatRelative, emptyState } from "../ui.js?v=77";
+import { api } from "../api.js?v=79";
+import { esc, icon, formatRelative, emptyState } from "../ui.js?v=78";
 import {
     boardSvg,
     hitKind,
@@ -7,7 +7,7 @@ import {
     KIND_LABELS,
     normalizeDart,
     playerColor
-} from "../dartboard.js?v=77";
+} from "../dartboard.js?v=78";
 
 export async function render(container, params = []) {
     const isDemo = params.length === 0;

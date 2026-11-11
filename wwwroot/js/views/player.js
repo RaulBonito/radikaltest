@@ -1,5 +1,5 @@
-import { api } from "../api.js?v=77";
-import { esc, icon, avatarHtml, formatNumber, toast, emptyState, officialBadge } from "../ui.js?v=77";
+import { api } from "../api.js?v=79";
+import { esc, icon, avatarHtml, formatNumber, toast, emptyState, officialBadge } from "../ui.js?v=78";
 import { countryTagHtml } from "../components.js?v=77";
 import { countryName } from "../preferences.js?v=77";
 

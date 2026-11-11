@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text;
 using RadikalPlayers.Radikal;
 
 namespace RadikalPlayers.Api;
@@ -32,22 +30,6 @@ public static class LiveRecordingEndpoints
             return recording is null
                 ? Results.NotFound(new { title = "No hay ninguna grabación para esta partida." })
                 : Results.Ok(recording);
-        });
-
-        api.MapGet("/live/recordings/{compid:int}/{encid:long}/{ngame:int}/csv", async (
-            int compid,
-            long encid,
-            int ngame,
-            LiveRecordingStore store,
-            CancellationToken ct) =>
-        {
-            var recording = await store.GetAsync(compid, encid, ngame, ct);
-            if (recording is null)
-                return Results.NotFound(new { title = "No hay ninguna grabación para esta partida." });
-
-            var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(BuildCsv(recording))).ToArray();
-            var slug = Slug($"{recording.Title}-{compid}-{encid}-{ngame}");
-            return Results.File(bytes, "text/csv; charset=utf-8", $"{slug}.csv");
         });
 
         api.MapDelete("/live/recordings/{compid:int}/{encid:long}/{ngame:int}", async (
@@ -86,74 +68,5 @@ public static class LiveRecordingEndpoints
         });
 
         return app;
-    }
-
-    private static string BuildCsv(RecordedRecordingDto recording)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine("Dardo;Ronda;Jugador;Jugador index;Tirada;Zona;Sector;Multiplicador;Puntos;Capturado");
-
-        foreach (var dart in recording.Darts)
-        {
-            builder.AppendLine(string.Join(';',
-                Escape(dart.Index + 1),
-                Escape(dart.Round),
-                Escape(dart.PlayerName),
-                Escape(dart.PlayerIndex + 1),
-                Escape(dart.Dart),
-                Escape(dart.HitRegion),
-                Escape(dart.Sector == 0 ? "BULL" : dart.Sector),
-                Escape(dart.Multiplier),
-                Escape(dart.Score),
-                Escape(dart.CapturedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture))));
-        }
-
-        if (recording.PlayerStats.Count > 0)
-        {
-            builder.AppendLine();
-            builder.AppendLine("Jugador;Dardos;Aciertos;Triples;Dobles;Bulls;Puntos;Mejor turno;Media por dardo");
-
-            foreach (var player in recording.PlayerStats)
-            {
-                builder.AppendLine(string.Join(';',
-                    Escape(player.Name),
-                    Escape(player.Darts),
-                    Escape(player.Hits),
-                    Escape(player.Triples),
-                    Escape(player.Doubles),
-                    Escape(player.Bulls),
-                    Escape(player.Score),
-                    Escape(player.HighestTurn),
-                    Escape(player.Average.ToString("0.00", CultureInfo.InvariantCulture))));
-            }
-        }
-
-        return builder.ToString();
-    }
-
-    private static string Escape(object value)
-    {
-        var text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
-        return text.Contains(';') || text.Contains('"')
-            ? $"\"{text.Replace("\"", "\"\"")}\""
-            : text;
-    }
-
-    private static string Slug(string value)
-    {
-        var builder = new StringBuilder();
-        foreach (var character in value.Normalize(NormalizationForm.FormD))
-        {
-            if (CharUnicodeInfo.GetUnicodeCategory(character) == UnicodeCategory.NonSpacingMark)
-                continue;
-
-            builder.Append(char.IsLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-');
-        }
-
-        var slug = builder.ToString().Trim('-');
-        while (slug.Contains("--", StringComparison.Ordinal))
-            slug = slug.Replace("--", "-", StringComparison.Ordinal);
-
-        return string.IsNullOrWhiteSpace(slug) ? "grabacion" : slug[..Math.Min(slug.Length, 80)];
     }
 }

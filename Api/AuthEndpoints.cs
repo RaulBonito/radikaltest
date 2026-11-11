@@ -4,7 +4,7 @@ namespace RadikalPlayers.Api;
 
 public static class AuthEndpoints
 {
-    private const string SessionKey = "radikal.session";
+    public const string SessionKey = "radikal.session";
 
     public sealed record LoginRequest(string Dni, string Clave);
 

@@ -189,11 +189,8 @@ export const api = {
     chatMessages: (room, after, signal) =>
         request(`/chat/${encodeURIComponent(room)}`, { params: { after }, signal }),
 
-    chatSend: (room, name, text, signal) =>
-        postJson(`/chat/${encodeURIComponent(room)}`, { name, text }, { signal }),
-
-    recordingCsvUrl: (compid, encid, ngame) =>
-        `${BASE}/live/recordings/${compid}/${encid}/${ngame}/csv`,
+    chatSend: (room, text, signal) =>
+        postJson(`/chat/${encodeURIComponent(room)}`, { text }, { signal }),
 
     tournamentSearch: (q, signal) =>
         request("/tournaments/search", { params: { q }, signal }),

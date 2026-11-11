@@ -1,5 +1,5 @@
-import { api } from "../api.js?v=77";
-import { esc, icon, formatNumber, avatarHtml } from "../ui.js?v=77";
+import { api } from "../api.js?v=79";
+import { esc, icon, formatNumber, avatarHtml } from "../ui.js?v=78";
 import { competitionCard, cleanRanking } from "../components.js?v=77";
 import { ambientVideo, observeAmbientVideos } from "../media.js?v=77";
 

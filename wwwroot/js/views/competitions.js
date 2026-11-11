@@ -1,6 +1,6 @@
-import { api } from "../api.js?v=77";
+import { api } from "../api.js?v=79";
 import { countryName, getCountry, subscribeCountry } from "../preferences.js?v=77";
-import { esc, icon, formatNumber, formatRelative, emptyState, debounce } from "../ui.js?v=77";
+import { esc, icon, formatNumber, formatRelative, emptyState, debounce } from "../ui.js?v=78";
 import { competitionCard, countryFlagHtml } from "../components.js?v=77";
 
 const TYPES = [

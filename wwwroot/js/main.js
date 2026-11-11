@@ -1,6 +1,6 @@
-import { api } from "./api.js?v=77";
-import { esc, icon, avatarHtml, setupImageFallbacks, debounce } from "./ui.js?v=77";
-import { refreshAuth, openLoginModal } from "./auth.js?v=80";
+import { api } from "./api.js?v=79";
+import { esc, icon, avatarHtml, setupImageFallbacks, debounce } from "./ui.js?v=78";
+import { refreshAuth, openLoginModal } from "./auth.js?v=81";
 import { loadCart, updateCartBadge } from "./cart.js?v=77";
 import {
     COUNTRIES, countryFallback, countryFlagUrl, countryName, featuredCountries, otherCountries,
@@ -32,7 +32,7 @@ let cleanup = null;
 let currentRoute = null;
 
 // Versión de assets: se incrementa al cambiar vistas para evitar módulos cacheados.
-const ASSET_VERSION = "126";
+const ASSET_VERSION = "140";
 const view = (name) => import(`./views/${name}.js?v=${ASSET_VERSION}`);
 
 const routes = [

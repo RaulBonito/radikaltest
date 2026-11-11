@@ -1,5 +1,5 @@
-import { api } from "../api.js?v=77";
-import { esc, icon, toast } from "../ui.js?v=77";
+import { api } from "../api.js?v=79";
+import { esc, icon, toast } from "../ui.js?v=78";
 
 export async function render(container, params) {
     const id = params[0];

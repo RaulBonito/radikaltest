@@ -1559,7 +1559,7 @@ public static partial class RadikalParsers
         }
 
         var (inMode, outMode) = ParseInOutModes(panel2);
-        var bullMode = "standard";
+        var bullMode = ParseBullMode(infoPanels);
 
         var roundsMatch = Regex.Match(panel5, @"\d+");
         var rounds = roundsMatch.Success && int.TryParse(roundsMatch.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedRounds)
@@ -1618,6 +1618,19 @@ public static partial class RadikalParsers
         if (parts.Length == 1)
             return ("open", ParseMode(parts[0]) ?? "double");
         return ("open", "double");
+    }
+
+    private static string ParseBullMode(IReadOnlyList<string> infoPanels)
+    {
+        var text = string.Join(' ', infoPanels ?? Array.Empty<string>());
+        var match = Regex.Match(text, @"(25|50)\s*/\s*(25|50)");
+        if (!match.Success) return "standard";
+
+        var left = match.Groups[1].Value;
+        var right = match.Groups[2].Value;
+        if (left == "50" && right == "50") return "50/50";
+        if (left == "25" && right == "50") return "25/50";
+        return $"{left}/{right}";
     }
 
     private static string? ParseMode(string value)

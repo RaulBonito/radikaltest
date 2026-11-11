@@ -1,9 +1,11 @@
-import { api } from "../api.js?v=77";
-import { esc, icon, avatarHtml, formatNumber, toast } from "../ui.js?v=77";
-import { playerColor, normalizeDart, hitLabel, hitKind } from "../dartboard.js?v=77";
+import { api } from "../api.js?v=79";
+import { esc, icon, avatarHtml, formatNumber, toast } from "../ui.js?v=78";
+import { playerColor, normalizeDart, hitLabel, hitKind } from "../dartboard.js?v=78";
+import { getCurrentPlayer, openLoginModal } from "../auth.js?v=81";
 
 const SPEEDS = [1, 2, 4];
 const BASE_DART_MS = 950;
+const LIVE_DART_MS = 1150;
 const TURN_GAP_MS = 420;
 const LIVE_POLL_MS = 3000;
 const SCORE_DELAY_MS = 700;
@@ -57,7 +59,8 @@ export async function render(container, params = [], query = new URLSearchParams
     let lastShellKey = "";
     let currentCtx = null;
     let scoreAnim = null;
-    let chatName = localStorage.getItem("replay-chat-name") || "";
+    let chatOpen = false;
+    let chatUnread = 0;
     const chat = { messages: [], lastId: 0, timer: null, loading: false, sending: false };
     const controller = new AbortController();
 
@@ -65,6 +68,10 @@ export async function render(container, params = [], query = new URLSearchParams
     document.addEventListener("fullscreenchange", onFullscreenChange);
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keydown", onTheaterKeyDown);
+    const onAuthChange = () => {
+        if (!destroyed && tab === "directo") renderChatPanel();
+    };
+    document.addEventListener("radikal:auth", onAuthChange);
 
     container.innerHTML = skeleton();
     await load(true);
@@ -82,6 +89,7 @@ export async function render(container, params = [], query = new URLSearchParams
         document.removeEventListener("fullscreenchange", onFullscreenChange);
         document.removeEventListener("keydown", onKeyDown);
         document.removeEventListener("keydown", onTheaterKeyDown);
+        document.removeEventListener("radikal:auth", onAuthChange);
         document.body.classList.remove("is-video-theater");
         container.querySelector(".replay-page")?.classList.remove("is-video-fullscreen");
         if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
@@ -108,7 +116,7 @@ export async function render(container, params = [], query = new URLSearchParams
     async function load(first) {
         try {
             const [selected, list] = await Promise.all([
-                api.liveRecording(competitionId, matchId, game, controller.signal),
+                fetchRecording({ allowSync: true }),
                 api.liveRecordings(controller.signal).catch(() => null)
             ]);
             if (destroyed) return;
@@ -131,7 +139,9 @@ export async function render(container, params = [], query = new URLSearchParams
             }
 
             applyRecording(selected, true);
-            dartCursor = -1;
+            if (first && (selected.isFinished || selected.isMock)) {
+                dartCursor = -1;
+            }
             if (first && selected.isMock && !query.has("tab")) tab = "partida";
             paint();
             loadPhotos();
@@ -142,21 +152,109 @@ export async function render(container, params = [], query = new URLSearchParams
             }
         } catch (error) {
             if (destroyed || error?.name === "AbortError") return;
+            const officialUrl = `https://www.radikalplayers.com/dianas/Radikal/Flash/Visualizador.php?compid=${competitionId}&encid=${matchId}&ngame=${game}&local=1&videos=Y`;
             container.innerHTML = `
                 <div class="replay-page replay-page-loading">
                     <div class="replay-loading-card replay-error-card">
                         ${icon("info")}
                         <p>No se pudo abrir esta partida.</p>
                         <small>${esc(error.message || "Radikal no ha devuelto los dardos.")}</small>
-                        <a class="btn btn-outline btn-sm" href="#/directo/finalizadas">Volver a finalizadas</a>
+                        <div class="replay-error-actions">
+                            <button class="btn btn-primary btn-sm" type="button" id="replay-retry">${icon("refresh")} Reintentar</button>
+                            <a class="btn btn-outline btn-sm" href="${officialUrl}" target="_blank" rel="noopener">${icon("external")} Visor oficial</a>
+                            <a class="btn btn-ghost btn-sm" href="#/directo">${icon("arrowLeft")} Volver al directo</a>
+                        </div>
                     </div>
                 </div>
             `;
+            container.querySelector("#replay-retry")?.addEventListener("click", () => {
+                if (destroyed) return;
+                container.innerHTML = skeleton();
+                load(true);
+            });
         }
     }
 
-    function applyRecording(next, first) {
-        const atEnd = first || dartCursor >= allDarts.length - 1;
+    /**
+     * Devuelve la grabación de la partida. Si todavía no existe, fuerza una captura
+     * y, como último recurso, construye una grabación en memoria con /api/live/darts.
+     * Esto permite entrar en partidas recién empezadas.
+     */
+    async function fetchRecording({ allowSync = true } = {}) {
+        const getStored = () => api.liveRecording(competitionId, matchId, game, controller.signal)
+            .catch((error) => {
+                if (error?.name === "AbortError") throw error;
+                if (error?.status === 404) return null;
+                throw error;
+            });
+
+        let selected = await getStored();
+        if (!selected && allowSync) {
+            await api.recordingSync(competitionId, matchId, game, controller.signal).catch(() => null);
+            selected = await getStored();
+        }
+        if (selected) return selected;
+
+        const live = await api.liveDarts(competitionId, matchId, game, controller.signal);
+        return recordingFromLiveDarts(live, await liveMatchTitle());
+    }
+
+    async function liveMatchTitle() {
+        try {
+            const data = await api.liveMatches(controller.signal);
+            const match = (data?.matches || []).find((item) =>
+                item.competitionId === competitionId &&
+                item.matchId === matchId &&
+                item.game === game);
+            return match?.title || null;
+        } catch {
+            return null;
+        }
+    }
+
+    function recordingFromLiveDarts(live, title) {
+        const raw = live?.darts || [];
+        const darts = raw.map((dart, index) => ({
+            ...dart,
+            index,
+            game: dart.game ?? game,
+            capturedAt: dart.capturedAt || live?.fetchedAt || new Date().toISOString()
+        }));
+        const players = [...new Set(darts.map((dart) => dart.playerName).filter(Boolean))];
+        const stamp = live?.fetchedAt || new Date().toISOString();
+
+        return {
+            competitionId,
+            matchId,
+            game,
+            title: title || `Partida #${matchId} · J${game}`,
+            isMock: false,
+            isFinished: Boolean(live?.isFinished),
+            winner: live?.winner || null,
+            gameType: live?.gameType || null,
+            isTeam: typeof live?.isTeam === "boolean" ? live.isTeam : null,
+            darts,
+            players,
+            playerStats: [],
+            totalTurns: 0,
+            totalDarts: darts.length,
+            totalScore: 0,
+            firstSeenAt: stamp,
+            lastUpdatedAt: stamp,
+            x01Rules: live?.x01Rules || null
+        };
+    }
+
+    function displayTitle(value) {
+        const text = String(value || "").trim();
+        if (!text) return `Partida #${matchId}`;
+        const first = text.split(/\s+\/\s+/)[0]?.trim();
+        return first || text;
+    }
+
+    function applyRecording(next, first, options = {}) {
+        const preserveCursor = options.preserveCursor === true;
+        const atEnd = !preserveCursor && (first || dartCursor >= allDarts.length - 1);
         turns = buildTurns(next.darts || []);
         allDarts = turns.flatMap((turn) => turn.darts).sort((left, right) => left.index - right.index);
         rules = resolveX01Rules(next);
@@ -174,13 +272,13 @@ export async function render(container, params = [], query = new URLSearchParams
     async function refreshLive() {
         if (destroyed) return;
         try {
-            await api.recordingSync(competitionId, matchId, game, controller.signal);
-            const next = await api.liveRecording(competitionId, matchId, game, controller.signal);
+            await api.recordingSync(competitionId, matchId, game, controller.signal).catch(() => null);
+            const next = await fetchRecording({ allowSync: false });
             if (destroyed || !next) return;
 
             const previousCount = allDarts.length;
             recording = next;
-            applyRecording(next, false);
+            applyRecording(next, false, { preserveCursor: true });
 
             if (tab === "partida" && allDarts.length > previousCount) {
                 if (liveFollow) enqueueLiveDarts(previousCount, allDarts.length);
@@ -212,10 +310,13 @@ export async function render(container, params = [], query = new URLSearchParams
         announceDart(allDarts[dartCursor]);
 
         if (liveQueue.length) {
+            const current = allDarts[next];
+            const following = allDarts[liveQueue[0]];
+            const gap = current && following && current.playerIndex !== following.playerIndex ? TURN_GAP_MS : 0;
             liveDrainTimer = setTimeout(() => {
                 liveDrainTimer = null;
                 drainLiveDarts();
-            }, Math.max(450, 900 / speed));
+            }, Math.max(450, (LIVE_DART_MS + gap) / speed));
         }
     }
 
@@ -239,6 +340,7 @@ export async function render(container, params = [], query = new URLSearchParams
         const modality = detectModality(recording);
         const totalDarts = allDarts.length;
         const isFinished = Boolean(recording?.isFinished);
+        const isLive = !isFinished;
         const maxCursor = totalDarts > 0 ? totalDarts - 1 + (isFinished ? 1 : 0) : -1;
         dartCursor = Math.max(-1, Math.min(dartCursor, maxCursor));
         const isSummary = isFinished && totalDarts > 0 && dartCursor >= totalDarts;
@@ -252,6 +354,12 @@ export async function render(container, params = [], query = new URLSearchParams
         const finalScores = modality === "cricket"
             ? computeCricket(allDarts, entities)
             : computeX01(allDarts, players, teams, teamMode, activeRules);
+        const cricketPlayerScores = modality === "cricket"
+            ? (teamMode ? computeCricket(revealed, players.map(singleEntity)) : scores)
+            : null;
+        const cricketFinalPlayerScores = modality === "cricket"
+            ? (teamMode ? computeCricket(allDarts, players.map(singleEntity)) : finalScores)
+            : null;
         const playerIndex = currentDart?.playerIndex ?? currentTurn?.playerIndex ?? 0;
         const currentPlayer = players.find((player) => player.playerIndex === playerIndex)
             || { playerIndex, name: currentDart?.playerName || currentTurn?.player || `Jugador ${playerIndex + 1}` };
@@ -280,7 +388,7 @@ export async function render(container, params = [], query = new URLSearchParams
         let scorePending = false;
         let panelTo = targetRemaining;
         let panelRaw = false;
-        if (teamMode && !activeRules.stacked) {
+        if (modality === "x01" && teamMode && !activeRules.stacked) {
             const teamScores = currentTeam
                 ? scores.filter((score) => currentTeam.playerIndices.some((index) => score.playerIndices.includes(index)))
                 : [];
@@ -351,8 +459,10 @@ export async function render(container, params = [], query = new URLSearchParams
             return sum + (flag?.valid === false || flag?.skipped ? 0 : Number(dart.score) || 0);
         }, 0);
         const ratingLabel = modality === "cricket" ? "MPR" : "PPD";
+        const currentPlayerCricketScore = cricketPlayerScores?.find((score) =>
+            score.playerIndices.includes(playerIndex)) || null;
         const ratingValue = modality === "cricket"
-            ? (currentScore?.mpr || 0).toFixed(2)
+            ? (currentPlayerCricketScore?.mpr || 0).toFixed(2)
             : (currentScore?.average || "0.00");
         const currentStats = modality === "cricket"
             ? {
@@ -368,7 +478,6 @@ export async function render(container, params = [], query = new URLSearchParams
 
         const turnChanged = lastPlayerIndex !== null && lastPlayerIndex !== playerIndex;
         lastPlayerIndex = playerIndex;
-        const isLive = !recording?.isFinished;
 
         const ctx = {
             players, teams, entities, modality, scores, finalScores, currentTurn, currentDart, turnDarts,
@@ -376,7 +485,8 @@ export async function render(container, params = [], query = new URLSearchParams
             isFinalDart, turnPosition, currentStats, turnTotal, ratingLabel, ratingValue,
             isLive, turnChanged, totalDarts, maxCursor, isSummary,
             displayRemaining, scorePending, rules: activeRules, dartFlags, currentDartFlags,
-            skipped: scores?.skipped || new Set(), frozenPlayers, currentHasCheckout
+            skipped: scores?.skipped || new Set(), frozenPlayers, currentHasCheckout,
+            cricketPlayerScores, cricketFinalPlayerScores
         };
         currentCtx = ctx;
 
@@ -504,7 +614,7 @@ export async function render(container, params = [], query = new URLSearchParams
                     ${icon("arrowLeft")}
                 </a>
                 <div class="rv-title">
-                    <strong>${esc(recording.title || `Partida #${matchId}`)}</strong>
+                    <strong title="${esc(recording.title || `Partida #${matchId}`)}">${esc(displayTitle(recording.title))}</strong>
                     <small>${modality === "cricket" ? "Cricket" : "X01"} · ${recording.isFinished ? "Finalizada" : "En directo"}</small>
                 </div>
                 <div class="rv-actions">
@@ -540,7 +650,7 @@ export async function render(container, params = [], query = new URLSearchParams
     function directoHtml() {
         if (recording.isMock) {
             return `
-                <div class="rv-live-shell">
+                <div class="rv-live-shell ${chatOpen ? "is-chat-open" : ""}">
                     <div class="rv-live-main rv-official">
                         <div class="rv-official-empty">
                             <div class="lv-radar" aria-hidden="true">
@@ -550,9 +660,14 @@ export async function render(container, params = [], query = new URLSearchParams
                             </div>
                             <strong>DIRECTO NO DISPONIBLE</strong>
                             <p>Esta partida es una simulación. El directo oficial solo existe para partidas reales de Radikal.</p>
-                            <button class="btn btn-primary btn-sm" type="button" data-tab="partida">
-                                ${icon("chart")} Ver partida
-                            </button>
+                            <div class="rv-official-empty-actions">
+                                <button class="btn btn-primary btn-sm" type="button" data-tab="partida">
+                                    ${icon("chart")} Ver partida
+                                </button>
+                                <button class="btn btn-outline btn-sm" type="button" data-chat-toggle aria-expanded="${chatOpen}">
+                                    ${icon("message")} Chat
+                                </button>
+                            </div>
                         </div>
                     </div>
                     ${chatHtml()}
@@ -562,7 +677,7 @@ export async function render(container, params = [], query = new URLSearchParams
 
         const url = officialViewerUrl();
         return `
-            <div class="rv-live-shell">
+            <div class="rv-live-shell ${chatOpen ? "is-chat-open" : ""}">
                 <div class="rv-live-main rv-official">
                     <div class="rv-official-frame">
                         <iframe
@@ -574,6 +689,11 @@ export async function render(container, params = [], query = new URLSearchParams
                             mozallowfullscreen
                             referrerpolicy="strict-origin-when-cross-origin"></iframe>
                         <div class="rv-video-tools">
+                            <button class="rv-video-btn rv-chat-toggle" type="button" data-chat-toggle
+                                    aria-expanded="${chatOpen}" aria-controls="rv-chat"
+                                    title="${chatOpen ? "Cerrar chat" : "Abrir chat"}">
+                                ${icon("message")}<span>Chat</span><i class="rv-chat-badge" data-chat-badge hidden>0</i>
+                            </button>
                             <button class="rv-video-btn" type="button" data-video-fullscreen
                                     title="Pantalla completa del vídeo" aria-label="Pantalla completa del vídeo">
                                 ${icon("maximize")}<span>Pantalla completa</span>
@@ -588,7 +708,7 @@ export async function render(container, params = [], query = new URLSearchParams
                         <span class="rv-live-state ${recording.isFinished ? "is-finished" : ""}">
                             <i></i>${recording.isFinished ? "FINALIZADA" : "EN DIRECTO"}
                         </span>
-                        <span class="rv-live-meta">${esc(recording.title || `Partida #${matchId}`)} · J${game}</span>
+                        <span class="rv-live-meta" title="${esc(recording.title || `Partida #${matchId}`)}">${esc(displayTitle(recording.title))} · J${game}</span>
                         <button class="rv-livebtn" type="button" data-video-fullscreen>
                             ${icon("maximize")} Pantalla completa
                         </button>
@@ -630,8 +750,6 @@ export async function render(container, params = [], query = new URLSearchParams
                 </div>
             `;
         }
-
-        const currentPhoto = PHOTO_CACHE.get(normalizeName(currentPlayer.name));
 
         return `
             <div class="rv-game is-partida ${isLive ? "is-live" : ""}">
@@ -690,7 +808,7 @@ export async function render(container, params = [], query = new URLSearchParams
         const skipped = Boolean(ctx.currentDartFlags?.skipped);
         const delta = !bust && scorePending ? Math.max(0, remaining - target) : 0;
         const hitDuration = `${Math.max(0.18, 0.7 / speed)}s`;
-        const rulesLine = `${activeRules.startScore} · ${rulesShortLabel(activeRules)} · ${activeRules.rounds} R`;
+        const rulesLine = `${activeRules.startScore} · ${rulesShortLabel(activeRules)} · ${bullModeLabel(activeRules)} · ${activeRules.rounds} R`;
 
         return `
             <div class="rv-big ${bust ? "is-bust" : ""} ${frozen ? "is-frozen" : ""}" style="--player-color:${accent}">
@@ -761,7 +879,7 @@ export async function render(container, params = [], query = new URLSearchParams
                         ${icon("target")}
                     </div>
                     <strong>WAITING FOR DARTS</strong>
-                    <p>${esc(recording?.title || `Partida #${matchId}`)}</p>
+                    <p title="${esc(recording?.title || `Partida #${matchId}`)}">${esc(displayTitle(recording?.title))}</p>
                     <small>${(modality || detectModality(recording)) === "cricket" ? "Cricket" : "X01"} · ${(players || []).length || buildPlayers(recording, allDarts).length} jugadores${recording?.isFinished ? " · Finalizada" : " · En directo"}</small>
                     <div class="lv-waiting-actions">
                         <button class="btn btn-primary btn-sm" type="button" data-tab="directo">${icon("tv")} Ver directo</button>
@@ -788,8 +906,8 @@ export async function render(container, params = [], query = new URLSearchParams
                     `).join("")}
                 </div>
                 ${isX01 ? `
-                    <span class="rv-rulesbadge" title="${esc(`${activeRules.startScore} · ${rulesDetailLabel(activeRules)} · ${activeRules.rounds} rondas`)}">
-                        ${icon("shield")} <b>${activeRules.startScore}</b> ${esc(rulesShortLabel(activeRules))}
+                    <span class="rv-rulesbadge" title="${esc(`${activeRules.startScore} · ${rulesDetailLabel(activeRules)} · ${bullModeLabel(activeRules)} · ${activeRules.rounds} rondas`)}">
+                        ${icon("shield")} <b>${activeRules.startScore}</b> <span class="rv-rules-io">${esc(rulesShortLabel(activeRules))}</span> <em>· ${esc(bullModeLabel(activeRules))}</em>
                     </span>
                 ` : ""}
                 <span class="rv-modebadge">${icon("users")} ${teamMode ? "Equipos" : "Individual"}</span>
@@ -805,6 +923,12 @@ export async function render(container, params = [], query = new URLSearchParams
         return liveFollow
             ? `<span class="rv-followbadge is-on"><i></i>EN DIRECTO</span>`
             : `<button class="rv-followbadge is-off" type="button" data-follow>${icon("play")} Ir al directo</button>`;
+    }
+
+    function liveControlHtml() {
+        return liveFollow
+            ? `<button class="rv-livefollow is-on" type="button" data-follow title="Ir a la última tirada del directo"><i></i><span>En directo</span></button>`
+            : `<button class="rv-livefollow is-off" type="button" data-follow>${icon("play")}<span>Ir al directo</span></button>`;
     }
 
     function playerIdsMap() {
@@ -943,9 +1067,11 @@ export async function render(container, params = [], query = new URLSearchParams
         if (teamMode) {
             body = teams.map((team, index) => {
                 const teamScore = scores.find((item) => item.entity.id === team.id);
-                const memberScores = team.playerIndices
-                    .map((playerIndex) => scores.find((item) => item.playerIndices.includes(playerIndex)))
-                    .filter(Boolean);
+                const memberScores = modality === "cricket"
+                    ? []
+                    : team.playerIndices
+                        .map((playerIndex) => scores.find((item) => item.playerIndices.includes(playerIndex)))
+                        .filter(Boolean);
                 const value = modality === "cricket"
                     ? (teamScore?.points ?? memberScores.reduce((sum, item) => sum + (item.points || 0), 0))
                     : (teamScore?.remaining ?? (memberScores.length ? memberScores.reduce((sum, item) => sum + (item.remaining || 0), 0) : activeRules.startScore));
@@ -1020,7 +1146,7 @@ export async function render(container, params = [], query = new URLSearchParams
                 <header class="rv-drawer-head">
                     <div>
                         <span class="rv-drawer-kicker">${icon("users")} ${teamMode ? "EQUIPOS" : "JUGADORES"}</span>
-                        <strong>${esc(recording?.title || `Partida #${matchId}`)}</strong>
+                        <strong title="${esc(recording?.title || `Partida #${matchId}`)}">${esc(displayTitle(recording?.title))}</strong>
                         <small>${rosterNote}</small>
                     </div>
                     <button class="rv-drawer-close" type="button" data-overlay-close aria-label="Cerrar">
@@ -1255,6 +1381,14 @@ export async function render(container, params = [], query = new URLSearchParams
         const cricketPerPlayer = modality === "cricket"
             ? computeCricket(allDarts, players.map(singleEntity))
             : null;
+        const cricketMprFor = (entity) => {
+            if (!entity) return 0;
+            const scores = entity.playerIndices
+                .map((index) => cricketPerPlayer?.find((item) => item.entity.playerIndices.includes(index)))
+                .filter(Boolean);
+            if (!scores.length) return 0;
+            return scores.reduce((sum, item) => sum + (item.mpr || 0), 0) / scores.length;
+        };
         const memberStat = (player) => {
             if (modality === "cricket") {
                 const single = cricketPerPlayer?.find((item) => item.entity.playerIndices.includes(player.playerIndex));
@@ -1290,7 +1424,7 @@ export async function render(container, params = [], query = new URLSearchParams
         const photo = winnerPlayer ? PHOTO_CACHE.get(normalizeName(winnerPlayer.name)) : null;
         const ratingLabel = modality === "cricket" ? "MPR" : "PPD";
         const ratingValue = modality === "cricket"
-            ? (finalScores.find((score) => winnerEntity && score.entity.id === winnerEntity.id)?.mpr || 0).toFixed(2)
+            ? cricketMprFor(winnerEntity).toFixed(2)
             : (teamMode
                 ? (winnerScore?.average || "0.00")
                 : (winnerPlayerScore?.average || "0.00"));
@@ -1320,7 +1454,7 @@ export async function render(container, params = [], query = new URLSearchParams
                     : item.scored,
                 darts: item.darts,
                 rating: modality === "cricket"
-                    ? (finalScores.find((score) => score.entity.id === entity.id)?.mpr || 0).toFixed(2)
+                    ? cricketMprFor(entity).toFixed(2)
                     : item.average,
                 isWinner
             };
@@ -1361,6 +1495,7 @@ export async function render(container, params = [], query = new URLSearchParams
                     <div class="rv-summary-rules">
                         <span>${icon("target")} ${activeRules.startScore}</span>
                         <span>${icon("shield")} ${esc(rulesShortLabel(activeRules))}</span>
+                        <span>${icon("target")} ${esc(bullModeLabel(activeRules))}</span>
                         <span>${icon("clock")} ${activeRules.rounds} rondas</span>
                         ${teamMode ? `<span>${icon("users")} ${activeRules.stacked ? "Marcador compartido" : "Marcadores separados"}</span>` : ""}
                     </div>
@@ -1528,7 +1663,7 @@ export async function render(container, params = [], query = new URLSearchParams
                         ? globalTarget - activeTarget + (ctx.displayRemaining ?? activeTarget)
                         : globalTarget;
                     const rows = members.map((member) => {
-                        const frozen = member.player.playerIndex === activePlayerIndex &&
+                        const frozen = member.player.playerIndex === ctx.currentPlayer?.playerIndex &&
                             ctx.currentHasCheckout &&
                             Boolean(ctx.frozenPlayers?.has(member.player.playerIndex) || member.item?.frozen);
                         return memberTile(member.player, member.item, frozen);
@@ -1564,6 +1699,13 @@ export async function render(container, params = [], query = new URLSearchParams
                     const hitTarget = currentDart && entity.playerIndices.includes(currentDart.playerIndex)
                         ? cricketTarget(currentDart)
                         : null;
+                    const playerScores = ctx.cricketPlayerScores || [];
+                    const memberMprs = entity.playerIndices
+                        .map((playerIndex) => playerScores.find((score) => score.playerIndices.includes(playerIndex))?.mpr)
+                        .filter((value) => Number.isFinite(value));
+                    const mpr = memberMprs.length
+                        ? memberMprs.reduce((sum, value) => sum + value, 0) / memberMprs.length
+                        : (item?.mpr || 0);
 
                     return `
                         <div class="rv-cricket-row ${active ? "is-active" : ""} ${isWinner ? "is-winner" : ""}"
@@ -1571,7 +1713,7 @@ export async function render(container, params = [], query = new URLSearchParams
                             <div class="rv-cricket-player">
                                 <strong>${esc(teamMode ? entity.name : entity.shortName)}</strong>
                                 <span>${formatNumber(item?.points || 0)}</span>
-                                <small>MPR ${(item?.mpr || 0).toFixed(2)}</small>
+                                <small>MPR ${mpr.toFixed(2)}</small>
                             </div>
                             ${CRICKET_TARGETS.map((target) => {
                                 const marks = item?.marks?.[target] || 0;
@@ -1588,7 +1730,7 @@ export async function render(container, params = [], query = new URLSearchParams
         `;
     }
 
-    function controlsHtml(currentTurn) {
+    function controlsHtml(currentTurn, isLive = false) {
         const max = maxCursorFor();
         const label = dartCursor < 0
             ? "Inicio"
@@ -1609,6 +1751,7 @@ export async function render(container, params = [], query = new URLSearchParams
                 </div>
 
                 <div class="rv-progress">
+                    ${isLive ? liveControlHtml() : ""}
                     <input type="range" min="-1" max="${max}" value="${dartCursor}" data-progress aria-label="Progreso dardo a dardo" />
                     <span>${label}</span>
                 </div>
@@ -1636,26 +1779,43 @@ export async function render(container, params = [], query = new URLSearchParams
        ================================================================= */
 
     function chatHtml() {
+        const me = getCurrentPlayer();
+        const canChat = Boolean(me);
         return `
-            <aside class="replay-chat rv-chat">
+            <aside class="replay-chat rv-chat" id="rv-chat" aria-label="Chat del directo">
                 <header class="replay-chat-head">
-                    <span class="replay-kicker">${icon("message")}Chat del directo</span>
-                    <small data-chat-count></small>
+                    <div class="rv-chat-head-copy">
+                        <span class="replay-kicker">${icon("message")}Chat del directo</span>
+                        <small data-chat-count></small>
+                    </div>
+                    <button class="rv-chat-close" type="button" data-chat-close aria-label="Cerrar chat">
+                        ${icon("close")}
+                    </button>
                 </header>
                 <div class="replay-chat-list" data-chat-list>
                     <p class="replay-chat-empty">Cargando mensajes…</p>
                 </div>
-                <form class="replay-chat-form" data-chat-form>
-                    <input class="replay-chat-name" data-chat-name maxlength="28" placeholder="Tu alias"
-                           autocomplete="nickname" value="${esc(chatName)}">
-                    <div class="replay-chat-row">
-                        <input class="replay-chat-input" data-chat-input maxlength="400" placeholder="Escribe al directo…"
-                               autocomplete="off" enterkeyhint="send">
-                        <button class="replay-chat-send" type="submit" aria-label="Enviar mensaje" title="Enviar mensaje">
-                            ${icon("send")}
+                ${canChat ? `
+                    <form class="replay-chat-form" data-chat-form>
+                        <span class="rv-chat-as">${icon("shield")} Hablas como <strong>${esc(me.alias || me.dni)}</strong></span>
+                        <div class="replay-chat-row">
+                            <input class="replay-chat-input" data-chat-input maxlength="400" placeholder="Escribe al directo…"
+                                   autocomplete="off" enterkeyhint="send">
+                            <button class="replay-chat-send" type="submit" data-chat-send aria-label="Enviar mensaje" title="Enviar mensaje">
+                                ${icon("send")}
+                            </button>
+                        </div>
+                    </form>
+                ` : `
+                    <div class="replay-chat-gate">
+                        <span class="rv-chat-gate-icon">${icon("shield")}</span>
+                        <strong>Inicia sesión para escribir</strong>
+                        <p>Puedes leer el chat, pero para participar necesitas tu cuenta Radikal.</p>
+                        <button class="btn btn-primary btn-sm" type="button" data-chat-login>
+                            ${icon("users")} Iniciar sesión
                         </button>
                     </div>
-                </form>
+                `}
             </aside>
         `;
     }
@@ -1722,11 +1882,13 @@ export async function render(container, params = [], query = new URLSearchParams
             });
         });
 
-        container.querySelector("[data-follow]")?.addEventListener("click", () => {
-            liveFollow = true;
-            liveQueue = [];
-            dartCursor = maxCursorFor();
-            paint();
+        container.querySelectorAll("[data-follow]").forEach((button) => {
+            button.addEventListener("click", () => {
+                liveFollow = true;
+                liveQueue = [];
+                dartCursor = maxCursorFor();
+                paint();
+            });
         });
 
         container.querySelectorAll(".rv-game [data-tab]").forEach((button) => {
@@ -1803,8 +1965,8 @@ export async function render(container, params = [], query = new URLSearchParams
             liveDrainTimer = null;
         }
         liveQueue = [];
-        dartCursor = -1;
-        liveFollow = false;
+        dartCursor = recording?.isFinished ? -1 : maxCursorFor();
+        liveFollow = !recording?.isFinished;
         const base = `#/directo/finalizadas/${competitionId}/${matchId}/${game}`;
         history.replaceState(null, "", value === "partida" ? `${base}?tab=partida` : base);
         paint();
@@ -2071,13 +2233,21 @@ export async function render(container, params = [], query = new URLSearchParams
 
             if (reset) chat.messages = [];
             const known = new Set(chat.messages.map((message) => message.id));
+            const me = getCurrentPlayer();
+            const myNames = new Set(
+                [me?.alias, me?.dni].filter(Boolean).map((value) => String(value).toLowerCase())
+            );
             for (const message of batch) {
                 if (known.has(message.id)) continue;
                 chat.messages.push(message);
                 known.add(message.id);
+                if (!chatOpen && !myNames.has(String(message.name || "").toLowerCase())) {
+                    chatUnread += 1;
+                }
             }
             chat.messages.sort((left, right) => left.id - right.id);
             chat.lastId = chat.messages.length ? chat.messages[chat.messages.length - 1].id : 0;
+            updateChatBadge();
             renderChat(reset || batch.length > 0);
         } catch (error) {
             if (destroyed || error?.name === "AbortError") return;
@@ -2102,40 +2272,103 @@ export async function render(container, params = [], query = new URLSearchParams
         if (scroll || atBottom) list.scrollTop = list.scrollHeight;
     }
 
+    function updateChatBadge() {
+        const badge = container.querySelector("[data-chat-badge]");
+        if (!badge) return;
+        const count = chatOpen ? 0 : chatUnread;
+        badge.hidden = count <= 0;
+        badge.textContent = count > 9 ? "9+" : String(count);
+    }
+
+    function toggleChat(open = !chatOpen) {
+        chatOpen = Boolean(open);
+        const shell = container.querySelector(".rv-live-shell");
+        shell?.classList.toggle("is-chat-open", chatOpen);
+        container.querySelectorAll("[data-chat-toggle]").forEach((button) => {
+            button.setAttribute("aria-expanded", String(chatOpen));
+            button.setAttribute("title", chatOpen ? "Cerrar chat" : "Abrir chat");
+        });
+        if (chatOpen) {
+            chatUnread = 0;
+            updateChatBadge();
+            if (!chat.messages.length) loadChat(true);
+            if (getCurrentPlayer()) {
+                window.setTimeout(() => container.querySelector("[data-chat-input]")?.focus(), 80);
+            }
+        }
+    }
+
+    function renderChatPanel() {
+        const current = container.querySelector(".rv-chat");
+        if (!current) return;
+        current.outerHTML = chatHtml();
+        bindChat();
+        renderChat();
+        updateChatBadge();
+    }
+
+    function openChatLogin() {
+        openLoginModal({
+            onSuccess: () => {
+                chatUnread = 0;
+                window.setTimeout(() => {
+                    if (destroyed) return;
+                    if (!container.querySelector("[data-chat-form]")) renderChatPanel();
+                    loadChat(true);
+                    container.querySelector("[data-chat-input]")?.focus();
+                }, 80);
+            }
+        });
+    }
+
     function bindChat() {
+        container.querySelectorAll("[data-chat-toggle]").forEach((button) => {
+            button.addEventListener("click", () => toggleChat());
+        });
+        container.querySelectorAll("[data-chat-close]").forEach((button) => {
+            button.addEventListener("click", () => toggleChat(false));
+        });
+        container.querySelectorAll("[data-chat-login]").forEach((button) => {
+            button.addEventListener("click", openChatLogin);
+        });
+        updateChatBadge();
+
         const form = container.querySelector("[data-chat-form]");
         if (!form) return;
-        const nameInput = form.querySelector("[data-chat-name]");
         const textInput = form.querySelector("[data-chat-input]");
-
-        nameInput?.addEventListener("change", () => {
-            chatName = nameInput.value.trim().slice(0, 28);
-            localStorage.setItem("replay-chat-name", chatName);
-        });
 
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
+            const me = getCurrentPlayer();
+            if (!me) {
+                openChatLogin();
+                return;
+            }
             const text = textInput?.value.trim();
             if (!text || chat.sending) return;
-
-            chatName = (nameInput?.value || "").trim().slice(0, 28);
-            localStorage.setItem("replay-chat-name", chatName);
 
             const button = form.querySelector("[data-chat-send]") || form.querySelector("button[type='submit']");
             chat.sending = true;
             if (button) button.disabled = true;
             try {
-                const message = await api.chatSend(room, chatName, text);
+                const message = await api.chatSend(room, text);
                 if (destroyed || !message) return;
                 if (!chat.messages.some((item) => item.id === message.id)) {
                     chat.messages.push(message);
                     chat.lastId = Math.max(chat.lastId, message.id);
                 }
+                chatUnread = 0;
+                updateChatBadge();
                 if (textInput) textInput.value = "";
                 renderChat(true);
                 textInput?.focus();
             } catch (error) {
-                if (!destroyed) toast(error?.message || "No se pudo enviar el mensaje", "error");
+                if (destroyed) return;
+                if (error?.status === 401) {
+                    openChatLogin();
+                } else {
+                    toast(error?.message || "No se pudo enviar el mensaje", "error");
+                }
             } finally {
                 chat.sending = false;
                 if (button) button.disabled = false;
@@ -2383,6 +2616,7 @@ function resolveX01Rules(recording) {
     const infoPanels = Array.isArray(raw.infoPanels || raw.InfoPanels)
         ? (raw.infoPanels || raw.InfoPanels)
         : [];
+    const bullMode = normalizeBullMode(raw.bullMode || raw.BullMode, infoPanels);
     const teamLocPlayers = Array.isArray(raw.teamLocPlayers || raw.TeamLocPlayers)
         ? (raw.teamLocPlayers || raw.TeamLocPlayers).map(Number)
         : null;
@@ -2393,6 +2627,7 @@ function resolveX01Rules(recording) {
         startScore,
         inMode,
         outMode,
+        bullMode,
         rounds,
         stacked,
         infoPanels,
@@ -2419,6 +2654,17 @@ function rulesDetailLabel(rules) {
 function rulesShortLabel(rules) {
     if (!rules) return "";
     return `${modeLabel(rules.inMode)} IN · ${modeLabel(rules.outMode)} OUT`;
+}
+
+function normalizeBullMode(value, infoPanels = []) {
+    const text = `${value || ""} ${(infoPanels || []).join(" ")}`.toUpperCase();
+    if (/50\s*\/\s*50/.test(text)) return "50/50";
+    if (/25\s*\/\s*50/.test(text)) return "25/50";
+    return "25/50";
+}
+
+function bullModeLabel(rules) {
+    return `BULL ${normalizeBullMode(rules?.bullMode, rules?.infoPanels)}`;
 }
 
 function detectTeamMode(recording, players) {
@@ -2891,16 +3137,17 @@ function computeCricket(darts, entities) {
     }]));
 
     for (const dart of darts) {
-        const target = cricketTarget(dart);
-        const marks = cricketMarks(dart);
-
         const entity = entityForPlayer(entities, dart.playerIndex);
         if (!entity) continue;
         const item = state.get(entity.id);
+        const target = cricketTarget(dart);
+        const marks = target ? cricketMarks(dart) : 0;
+
+        item.darts += 1;
         item.rounds.add(dart.round);
-        item.marksTotal += marks;
 
         if (!target || !marks) continue;
+        item.marksTotal += marks;
 
         const opponents = entities.filter((other) => other.id !== entity.id);
         const opponentsOpen = opponents.some((other) => state.get(other.id).marks[target] < 3);
@@ -2913,7 +3160,6 @@ function computeCricket(darts, entities) {
         }
 
         item.marks[target] = Math.min(3, after);
-        item.darts += 1;
     }
 
     return [...state.values()].map((item) => ({

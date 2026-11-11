@@ -473,10 +473,12 @@ export function dartChip(dart) {
  */
 export function dartboardSvg(darts, options = {}) {
     const list = normalizeDarts(darts);
+    const highlightIndex = Number.isInteger(options.highlightIndex) ? options.highlightIndex : -1;
     const marks = list.map((dart, index) => ({
         index,
         dart,
         color: playerColor(dart.playerIndex),
+        highlight: index === highlightIndex,
         title: `Ronda ${dart.round} · ${dart.playerName || `Jugador ${dart.playerIndex + 1}`} · ${hitLabel(dart)} (${dart.score} pts)`
     }));
 

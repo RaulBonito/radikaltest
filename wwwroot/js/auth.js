@@ -1,5 +1,5 @@
-import { api } from "./api.js?v=77";
-import { esc, icon, openModal, toast, avatarHtml, officialBadge } from "./ui.js?v=77";
+import { api } from "./api.js?v=79";
+import { esc, icon, openModal, toast, avatarHtml, officialBadge } from "./ui.js?v=78";
 
 let current = null;
 
@@ -62,6 +62,7 @@ function updateNavUser() {
 
 export function updateHeaderAuth() {
     updateNavUser();
+    document.dispatchEvent(new CustomEvent("radikal:auth", { detail: { player: current } }));
 
     const loginButton = document.getElementById("login-open");
     const chip = document.getElementById("user-chip");

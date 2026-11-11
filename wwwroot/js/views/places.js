@@ -1,5 +1,5 @@
-import { api } from "../api.js?v=77";
-import { esc, icon, formatNumber, debounce, officialBadge, emptyState } from "../ui.js?v=77";
+import { api } from "../api.js?v=79";
+import { esc, icon, formatNumber, debounce, officialBadge, emptyState } from "../ui.js?v=78";
 
 const BOARD_LABELS = {
     AMERICAN: "American",

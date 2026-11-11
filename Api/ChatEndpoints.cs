@@ -24,11 +24,19 @@ public static class ChatEndpoints
             string room,
             ChatPostRequest body,
             LiveChatStore store,
+            PlayerAuthService auth,
+            HttpContext context,
             CancellationToken ct) =>
         {
+            var sessionId = context.Session.GetString(AuthEndpoints.SessionKey);
+            var profile = await auth.GetSessionProfileAsync(sessionId, refresh: false, ct);
+            if (profile is null)
+                return Results.Unauthorized();
+
             try
             {
-                var message = await store.AddAsync(room, body.Name, body.Text, ct);
+                var author = string.IsNullOrWhiteSpace(profile.Alias) ? profile.Dni : profile.Alias;
+                var message = await store.AddAsync(room, author, body.Text, ct);
                 return Results.Ok(message);
             }
             catch (ArgumentException ex)

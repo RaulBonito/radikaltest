@@ -24,7 +24,7 @@ Abre `http://localhost:5188`.
 | Ruta | Pantalla |
 |---|---|
 | `#/` | Inicio / dashboard |
-| `#/rankings` | Rankings con filtros y exportación CSV |
+| `#/rankings` | Rankings con filtros por país, juego, diana y género |
 | `#/jugador/{id}` | Ficha pública de cualquier jugador del directorio |
 | `#/competiciones` | Buscador y listado de competiciones |
 | `#/competiciones/{id}?type=TORX` | Detalle + clasificación |
@@ -208,7 +208,7 @@ Abre `http://localhost:5188`.
 - **Identidad real del jugador:** cada dardo guarda también su Radikal ID. El visor resuelve la ficha, el nombre completo y la foto por ID aunque el alias no esté en el índice público de rankings.
 - **Diana avanzada (enlace "Avanzado"):** la diana pinta la zona real de cada impacto con el color del
   jugador. Los dardos fuera de la diana no se representan y, si dos jugadores coinciden, la zona se
-  divide en franjas. Incluye filtro por jugador, detalle de un dardo y exportación a CSV.
+  divide en franjas. Incluye filtro por jugador y detalle de un dardo.
 
 ### Endpoints de partidas finalizadas y chat
 
@@ -216,11 +216,10 @@ Abre `http://localhost:5188`.
 |---|---|
 | `GET /api/live/recordings` | Listado de partidas finalizadas agrupadas por juegos. |
 | `GET /api/live/recordings/{compid}/{encid}/{ngame}` | Partida completa con estadísticas por jugador. |
-| `GET /api/live/recordings/{compid}/{encid}/{ngame}/csv` | Volcado CSV de dardos y resumen. |
 | `POST /api/live/recordings/{compid}/{encid}/{ngame}/sync` | Fuerza un sondeo inmediato del directo. |
 | `DELETE /api/live/recordings/{compid}/{encid}/{ngame}` | Borra una partida finalizada. |
 | `GET /api/chat/{sala}?after={id}` | Mensajes nuevos del chat de la partida. |
-| `POST /api/chat/{sala}` | Publica `{ name, text }` en el chat (máx. 300 mensajes por sala). |
+| `POST /api/chat/{sala}` | Publica `{ text }` en el chat (requiere sesión iniciada). |
 
 El chat se guarda en `App_Data/chat/{sala}.json` y el visor lo sincroniza cada 3,5 s mientras está
 abierta la pestaña **Directo**.

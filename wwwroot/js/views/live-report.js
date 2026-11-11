@@ -1,10 +1,10 @@
-import { api } from "../api.js?v=77";
+import { api } from "../api.js?v=79";
 import {
-    esc, icon, formatNumber, formatRelative, formatDate, emptyState, downloadCsv, toast
-} from "../ui.js?v=77";
+    esc, icon, formatNumber, formatRelative, emptyState, toast
+} from "../ui.js?v=78";
 import {
-    normalizeDarts, groupTurns, dartChip, cleanHitLabel, dartboardSvg, playerColor
-} from "../dartboard.js?v=77";
+    normalizeDarts, groupTurns, groupRounds, dartChip, dartboardSvg, playerColor, hitLabel
+} from "../dartboard.js?v=78";
 
 export async function render(container, params = []) {
     const competitionId = Number(params[0]);
@@ -13,6 +13,8 @@ export async function render(container, params = []) {
 
     let recording = null;
     let activePlayer = null;
+    let activeRound = null;
+    let activeDart = 0;
     let timer = null;
     let destroyed = false;
 
@@ -41,7 +43,7 @@ export async function render(container, params = []) {
             const content = container.querySelector("#report-content");
             if (!content) return;
             content.innerHTML = error.name === "ApiError" && error.status === 404
-                ? emptyState("Partida finalizada no encontrada", "Todavía no hay dardos registrados para esta partida. La partida empieza automáticamente cuando la partida está en directo.", "clock")
+                ? emptyState("Partida finalizada no encontrada", "Todavía no hay dardos registrados para esta partida. La partida empieza automáticamente cuando está en directo.", "clock")
                 : `
                     <div class="error-box">
                         <strong>No se pudo cargar el informe.</strong>
@@ -62,24 +64,46 @@ export async function render(container, params = []) {
         timer = setInterval(() => load(), 8000);
     }
 
+    function explorerState() {
+        const darts = normalizeDarts(recording?.darts || []);
+        const players = collectPlayers(darts);
+        const rounds = groupRounds(darts);
+        if (activePlayer !== null && !players.some((player) => player.playerIndex === activePlayer)) {
+            activePlayer = null;
+        }
+        if (activeRound !== null && !rounds.some((round) => round.round === activeRound)) {
+            activeRound = null;
+        }
+        const filtered = darts.filter((dart) =>
+            (activePlayer === null || Number(dart.playerIndex) === activePlayer) &&
+            (activeRound === null || Number(dart.round) === activeRound)
+        );
+        return { darts, players, rounds, filtered };
+    }
+
     function draw() {
         const content = container.querySelector("#report-content");
         if (!content) return;
 
-        const darts = normalizeDarts(recording.darts || []);
-        const players = collectPlayers(darts);
-        const selected = activePlayer === null ? darts : darts.filter((dart) => Number(dart.playerIndex) === activePlayer);
+        const state = explorerState();
+        const { darts, players, rounds, filtered } = state;
+        if (!filtered.length) activeDart = 0;
+        else activeDart = Math.max(0, Math.min(activeDart, filtered.length - 1));
+
         const stats = computeStats(darts);
-        const selectedStats = computeStats(selected);
+        const selectedStats = computeStats(filtered);
         const isMock = Boolean(recording.isMock);
         const finished = Boolean(recording.isFinished);
         const winner = recording.winner;
+        const active = filtered[activeDart] || null;
+        const activePlayerName = players.find((player) => player.playerIndex === activePlayer)?.name || "Todos";
+        const roundLabel = activeRound === null ? "Todas" : `R${activeRound}`;
 
         content.innerHTML = `
             <div class="report-head">
                 <div>
                     <span class="kicker">${icon("chart")}Informe avanzado</span>
-                    <h1 class="report-title">${esc(recording.title || `Partida #${matchId}`)}</h1>
+                    <h1 class="report-title">${esc(displayTitle(recording.title) || `Partida #${matchId}`)}</h1>
                     <p class="section-sub">
                         Juego ${esc(recording.game)} · ${players.length} ${players.length === 1 ? "jugador" : "jugadores"} ·
                         ${stats.darts} dardos registrados · actualizado ${esc(formatRelative(recording.lastUpdatedAt))}
@@ -112,37 +136,89 @@ export async function render(container, params = []) {
                 <div class="report-summary-item"><span>Ganador</span><strong>${esc(winner || (finished ? "—" : "En juego"))}</strong></div>
             </div>
 
-            ${stats.darts ? `
-                <div class="report-player-grid">
-                    ${players.map((player) => playerCard(player, darts, winner)).join("")}
-                </div>
-
+            ${darts.length ? `
                 <div class="report-layout">
                     <section class="report-board-card">
                         <div class="report-card-head">
                             <div>
-                                <span class="kicker">${icon("target")}Mapa de impactos</span>
-                                <h2>Dónde han caído</h2>
+                                <span class="kicker">${icon("target")}Explorador de tiradas</span>
+                                <h2>Diana interactiva</h2>
                             </div>
-                            <span class="small muted">${selected.length} dardos</span>
+                            <span class="small muted" data-dart-count>${filtered.length} dardos visibles</span>
                         </div>
-                        <div class="report-tabs" role="tablist" aria-label="Filtrar diana por jugador">
-                            <button class="report-tab ${activePlayer === null ? "active" : ""}" data-report-player="all" type="button">Todos</button>
-                            ${players.map((player) => `
-                                <button class="report-tab ${activePlayer === player.playerIndex ? "active" : ""}" data-report-player="${player.playerIndex}" type="button">
-                                    ${esc(player.name)}
+
+                        <div class="round-nav">
+                            <div class="round-nav-controls">
+                                <div class="round-nav-current">
+                                    <span>Ronda</span>
+                                    <strong>${esc(roundLabel)}</strong>
+                                    <span class="round-nav-player">${esc(activePlayerName)}</span>
+                                </div>
+                                <div class="round-nav-actions">
+                                    <button class="btn btn-ghost btn-sm" type="button" data-round-prev aria-label="Ronda anterior">${icon("chevronLeft")}</button>
+                                    <button class="btn btn-ghost btn-sm" type="button" data-round-next aria-label="Ronda siguiente">${icon("chevronRight")}</button>
+                                </div>
+                            </div>
+                            <div class="round-chips">
+                                <button class="round-chip ${activeRound === null ? "is-active" : ""}" type="button" data-round="all">
+                                    <strong>Todas</strong><small>${darts.length}</small>
                                 </button>
-                            `).join("")}
+                                ${rounds.map((round) => `
+                                    <button class="round-chip ${activeRound === round.round ? "is-active" : ""}" type="button" data-round="${round.round}">
+                                        <strong>R${round.round}</strong><small>${round.darts.length}</small>
+                                    </button>
+                                `).join("")}
+                            </div>
+                            <div class="round-nav-secondary">
+                                <button class="recordings-tab ${activePlayer === null ? "is-active" : ""}" type="button" data-report-player="all">Todos</button>
+                                ${players.map((player) => `
+                                    <button class="recordings-tab ${activePlayer === player.playerIndex ? "is-active" : ""}" type="button" data-report-player="${player.playerIndex}">
+                                        ${esc(player.name)}
+                                    </button>
+                                `).join("")}
+                            </div>
+                            <div class="board-scope-bar">
+                                <span class="board-scope">${icon("target")} ${filtered.length} dardos · ${esc(activePlayerName)} · ${esc(roundLabel)}</span>
+                                <button class="btn btn-ghost btn-sm" type="button" data-clear-filters>Ver todo</button>
+                            </div>
                         </div>
-                        <div class="report-board-wrap">
-                            ${dartboardSvg(selected)}
+
+                        <div class="report-board-wrap" data-report-board>
+                            ${filtered.length
+                                ? dartboardSvg(filtered, {
+                                    highlightIndex: activeDart,
+                                    trackable: true,
+                                    showNumbers: true,
+                                    label: "Diana interactiva de tiradas"
+                                })
+                                : `<div class="report-board-empty">${icon("target")} Sin tiradas para estos filtros.</div>`}
                         </div>
+
                         <div class="darts-legend">
                             ${players.map((player) => `<span><i class="legend-dot" style="background:${playerColor(player.playerIndex)}"></i>${esc(player.name)}</span>`).join("")}
                         </div>
-                        ${activePlayer !== null ? `
+
+                        ${active ? `
+                            <div class="report-dart-detail" data-dart-detail>
+                                ${dartDetailHtml(active)}
+                            </div>
+                            <div class="report-explorer-nav">
+                                <button class="btn btn-outline btn-sm" type="button" data-dart-prev>${icon("chevronLeft")} Anterior</button>
+                                <span class="report-explorer-pos" data-dart-pos>${activeDart + 1} / ${filtered.length}</span>
+                                <button class="btn btn-outline btn-sm" type="button" data-dart-next>Siguiente ${icon("chevronRight")}</button>
+                            </div>
+                            <div class="report-throw-list" data-throw-list>
+                                ${filtered.map((dart, index) => `
+                                    <button class="report-throw ${index === activeDart ? "is-active" : ""}" type="button" data-dart-select="${index}"
+                                            style="--player-color:${playerColor(dart.playerIndex)}">
+                                        <span class="rt-round">R${dart.round}</span>
+                                        <span class="rt-player"><i></i>${esc(dart.playerName || `Jugador ${dart.playerIndex + 1}`)}</span>
+                                        <strong class="rt-hit">${esc(hitLabel(dart))}</strong>
+                                        <span class="rt-score">${formatNumber(dart.score)}</span>
+                                    </button>
+                                `).join("")}
+                            </div>
                             <p class="small muted report-filter-note">
-                                Mostrando ${esc(players.find((player) => player.playerIndex === activePlayer)?.name || "jugador")}:
                                 ${formatNumber(selectedStats.averageDart)} media/dardo · ${selectedStats.triples} triples · ${selectedStats.bulls} bulls.
                             </p>
                         ` : ""}
@@ -151,16 +227,27 @@ export async function render(container, params = []) {
                     <section class="report-turns-card">
                         <div class="report-card-head">
                             <div>
-                                <span class="kicker">${icon("list")}Tiradas por ronda</span>
-                                <h2>Ronda a ronda</h2>
+                                <span class="kicker">${icon("list")}Ronda a ronda</span>
+                                <h2>Matriz de tiradas</h2>
                             </div>
-                            <button class="btn btn-outline btn-sm" id="report-csv" type="button">${icon("download")} CSV</button>
                         </div>
                         <div class="report-matrix-wrap">
-                            ${roundMatrix(darts, players)}
+                            ${roundMatrix(darts, players, rounds)}
                         </div>
                     </section>
                 </div>
+
+                <section class="report-players-lower">
+                    <div class="report-card-head">
+                        <div>
+                            <span class="kicker">${icon("users")}Jugadores</span>
+                            <h2>Estadísticas por jugador</h2>
+                        </div>
+                    </div>
+                    <div class="report-player-grid">
+                        ${players.map((player) => playerCard(player, darts, winner)).join("")}
+                    </div>
+                </section>
             ` : emptyState(
                 finished ? "Sin dardos registrados" : "Partida en juego",
                 finished
@@ -169,17 +256,135 @@ export async function render(container, params = []) {
                 "target")}
         `;
 
-        content.querySelectorAll("[data-report-player]").forEach((button) => {
+        bindExplorer(state);
+    }
+
+    function bindExplorer(state) {
+        const { players, rounds, filtered } = state;
+        container.querySelector("[data-report-refresh]")?.addEventListener("click", () => load(true));
+        container.querySelector("#report-refresh")?.addEventListener("click", () => load(true));
+        container.querySelector("#report-back")?.addEventListener("click", () => { window.location.hash = "#/directo"; });
+
+        container.querySelectorAll("[data-report-player]").forEach((button) => {
             button.addEventListener("click", () => {
                 const value = button.dataset.reportPlayer;
                 activePlayer = value === "all" ? null : Number(value);
+                activeDart = 0;
                 draw();
             });
         });
 
-        content.querySelector("#report-csv")?.addEventListener("click", () => exportCsv(darts, players));
-        content.querySelector("#report-refresh")?.addEventListener("click", () => load(true));
-        content.querySelector("#report-back")?.addEventListener("click", () => { window.location.hash = "#/directo"; });
+        container.querySelectorAll("[data-round]").forEach((button) => {
+            button.addEventListener("click", () => {
+                activeRound = button.dataset.round === "all" ? null : Number(button.dataset.round);
+                activeDart = 0;
+                draw();
+            });
+        });
+
+        container.querySelector("[data-round-prev]")?.addEventListener("click", () => stepRound(-1, rounds));
+        container.querySelector("[data-round-next]")?.addEventListener("click", () => stepRound(1, rounds));
+        container.querySelector("[data-clear-filters]")?.addEventListener("click", () => {
+            activePlayer = null;
+            activeRound = null;
+            activeDart = 0;
+            draw();
+        });
+
+        container.querySelector("[data-dart-prev]")?.addEventListener("click", () => selectDart(activeDart - 1));
+        container.querySelector("[data-dart-next]")?.addEventListener("click", () => selectDart(activeDart + 1));
+        bindBoard();
+
+        container.querySelectorAll("[data-dart-select]").forEach((button) => {
+            button.addEventListener("click", () => selectDart(Number(button.dataset.dartSelect)));
+        });
+
+        container.querySelectorAll("[data-matrix-round][data-matrix-player]").forEach((cell) => {
+            const selectCell = () => {
+                activeRound = Number(cell.dataset.matrixRound);
+                activePlayer = Number(cell.dataset.matrixPlayer);
+                activeDart = 0;
+                draw();
+            };
+            cell.addEventListener("click", selectCell);
+            cell.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    selectCell();
+                }
+            });
+        });
+    }
+
+    function bindBoard() {
+        const board = container.querySelector("[data-report-board]");
+        board?.querySelectorAll("[data-dart-index]").forEach((zone) => {
+            zone.addEventListener("click", () => selectDart(Number(zone.dataset.dartIndex)));
+            zone.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    selectDart(Number(zone.dataset.dartIndex));
+                }
+            });
+        });
+    }
+
+    function selectDart(index) {
+        const state = explorerState();
+        const { filtered } = state;
+        if (!filtered.length) return;
+        activeDart = Math.max(0, Math.min(filtered.length - 1, Number(index) || 0));
+
+        const board = container.querySelector("[data-report-board]");
+        if (board) {
+            board.innerHTML = dartboardSvg(filtered, {
+                highlightIndex: activeDart,
+                trackable: true,
+                showNumbers: true,
+                label: "Diana interactiva de tiradas"
+            });
+            bindBoard();
+        }
+
+        const active = filtered[activeDart];
+        const detail = container.querySelector("[data-dart-detail]");
+        if (detail) detail.innerHTML = dartDetailHtml(active);
+
+        container.querySelectorAll("[data-dart-select]").forEach((button) => {
+            button.classList.toggle("is-active", Number(button.dataset.dartSelect) === activeDart);
+        });
+        container.querySelectorAll("[data-dart-select]").forEach((button) => {
+            if (Number(button.dataset.dartSelect) === activeDart) {
+                button.scrollIntoView({ block: "nearest" });
+            }
+        });
+
+        const pos = container.querySelector("[data-dart-pos]");
+        if (pos) pos.textContent = `${activeDart + 1} / ${filtered.length}`;
+        const count = container.querySelector("[data-dart-count]");
+        if (count) count.textContent = `${filtered.length} dardos visibles`;
+    }
+
+    function stepRound(direction, rounds) {
+        const values = rounds.map((round) => round.round);
+        if (!values.length) return;
+        const currentIndex = activeRound === null ? -1 : values.indexOf(activeRound);
+        const nextIndex = currentIndex === -1
+            ? (direction > 0 ? 0 : values.length - 1)
+            : Math.max(0, Math.min(values.length - 1, currentIndex + direction));
+        activeRound = values[nextIndex];
+        activeDart = 0;
+        draw();
+    }
+
+    function dartDetailHtml(dart) {
+        return `
+            <span class="report-dart-round">R${dart.round}</span>
+            <span class="report-dart-player"><i style="background:${playerColor(dart.playerIndex)}"></i>${esc(dart.playerName || `Jugador ${dart.playerIndex + 1}`)}</span>
+            <strong class="report-dart-hit">${esc(hitLabel(dart))}</strong>
+            <span class="report-dart-score">${formatNumber(dart.score)} pts</span>
+            <span class="report-dart-index">Dardo ${dart.dart} de la ronda</span>
+        `;
     }
 
     function playerCard(player, darts, winner) {
@@ -211,9 +416,8 @@ export async function render(container, params = []) {
         `;
     }
 
-    function roundMatrix(darts, players) {
+    function roundMatrix(darts, players, rounds) {
         if (!darts.length) return "";
-        const rounds = [...new Set(darts.map((dart) => Number(dart.round)))].sort((a, b) => a - b);
         const byCell = new Map();
         for (const dart of darts) {
             const key = `${dart.round}-${dart.playerIndex}`;
@@ -231,22 +435,26 @@ export async function render(container, params = []) {
                 <thead>
                     <tr>
                         <th>Ronda</th>
-                        ${players.map((player) => `<th>${esc(player.name)}</th>`).join("")}
+                        ${players.map((player) => `<th class="${activePlayer === player.playerIndex ? "is-active-player" : ""}">${esc(player.name)}</th>`).join("")}
                     </tr>
                 </thead>
                 <tbody>
                     ${rounds.map((round) => `
-                        <tr>
-                            <th>R${round}</th>
+                        <tr class="${activeRound === round.round ? "is-active-round" : ""}">
+                            <th>R${round.round}</th>
                             ${players.map((player) => {
-                                const turn = (byCell.get(`${round}-${player.playerIndex}`) || []).sort((a, b) => a.dart - b.dart);
+                                const turn = (byCell.get(`${round.round}-${player.playerIndex}`) || []).sort((a, b) => a.dart - b.dart);
                                 const total = turn.reduce((sum, dart) => sum + dart.score, 0);
+                                const isActive = activeRound === round.round && activePlayer === player.playerIndex;
+                                if (!turn.length) {
+                                    return `<td class="report-matrix-cell"><span class="muted">—</span></td>`;
+                                }
                                 return `
-                                    <td>
-                                        ${turn.length ? `
-                                            <div class="matrix-darts">${turn.map(dartChip).join("")}</div>
-                                            <span class="matrix-total">${total} pts</span>
-                                        ` : `<span class="muted">—</span>`}
+                                    <td class="report-matrix-cell ${isActive ? "is-active-cell" : ""}"
+                                        tabindex="0" role="button"
+                                        data-matrix-round="${round.round}" data-matrix-player="${player.playerIndex}">
+                                        <div class="matrix-darts">${turn.map(dartChip).join("")}</div>
+                                        <span class="matrix-total">${total} pts</span>
                                     </td>
                                 `;
                             }).join("")}
@@ -261,34 +469,6 @@ export async function render(container, params = []) {
                 </tfoot>
             </table>
         `;
-    }
-
-    function exportCsv(darts, players) {
-        const rounds = [...new Set(darts.map((dart) => Number(dart.round)))].sort((a, b) => a - b);
-        const byCell = new Map();
-        for (const dart of darts) {
-            const key = `${dart.round}-${dart.playerIndex}`;
-            if (!byCell.has(key)) byCell.set(key, []);
-            byCell.get(key).push(dart);
-        }
-
-        const rows = [["Ronda", ...players.flatMap((player) => [`${player.name} dardos`, `${player.name} total`])]];
-        for (const round of rounds) {
-            const row = [`R${round}`];
-            for (const player of players) {
-                const turn = (byCell.get(`${round}-${player.playerIndex}`) || []).sort((a, b) => a.dart - b.dart);
-                row.push(turn.map(cleanHitLabel).join(" · ") || "—");
-                row.push(turn.reduce((sum, dart) => sum + dart.score, 0));
-            }
-            rows.push(row);
-        }
-
-        const totals = players.map((player) => darts
-            .filter((dart) => Number(dart.playerIndex) === player.playerIndex)
-            .reduce((sum, dart) => sum + dart.score, 0));
-        rows.push(["Total", ...players.flatMap((_, index) => ["", totals[index]])]);
-        downloadCsv(`radikal-informe-${competitionId}-${matchId}-j${game}.csv`, rows);
-        toast("CSV descargado", "success");
     }
 
     return () => {
@@ -311,6 +491,13 @@ function shell() {
             </div>
         </div>
     `;
+}
+
+function displayTitle(value) {
+    const text = String(value || "").trim();
+    if (!text) return "";
+    const first = text.split(/\s+\/\s+/)[0]?.trim();
+    return first || text;
 }
 
 function collectPlayers(darts) {

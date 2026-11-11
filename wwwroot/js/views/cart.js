@@ -1,4 +1,4 @@
-import { esc, icon, toast, emptyState } from "../ui.js?v=77";
+import { esc, icon, toast, emptyState } from "../ui.js?v=78";
 import {
     loadCart,
     subscribeCart,

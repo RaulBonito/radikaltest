@@ -1,5 +1,5 @@
-import { api } from "../api.js?v=77";
-import { esc, icon, formatNumber, emptyState, toast } from "../ui.js?v=77";
+import { api } from "../api.js?v=79";
+import { esc, icon, formatNumber, emptyState, toast } from "../ui.js?v=78";
 import { addToCart, cartCount, loadCart, subscribeCart } from "../cart.js?v=77";
 
 const GROUP_LABELS = {

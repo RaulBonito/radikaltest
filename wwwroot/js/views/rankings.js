@@ -1,10 +1,10 @@
-import { api } from "../api.js?v=77";
+import { api } from "../api.js?v=79";
 import {
-    esc, icon, formatNumber, formatRelative, emptyState, downloadCsv, openModal, avatarHtml, officialBadge
-} from "../ui.js?v=77";
+    esc, icon, formatNumber, formatRelative, emptyState, openModal, avatarHtml, officialBadge
+} from "../ui.js?v=78";
 import { playerModalContent, cleanRanking, countryFlagHtml } from "../components.js?v=77";
 import { countryName, getCountry, setCountry, subscribeCountry } from "../preferences.js?v=77";
-import { getCurrentPlayer } from "../auth.js?v=80";
+import { getCurrentPlayer } from "../auth.js?v=81";
 
 const DIANAS = [
     { code: "aa", label: "Ancho" },
@@ -52,7 +52,6 @@ export async function render(container) {
                         <h1 class="section-title">Ranking <span class="accent">Radikal</span></h1>
                         <p class="section-sub">PPD y MPR oficiales por país, tipo de diana y género.</p>
                     </div>
-                    <button class="btn btn-outline btn-sm" id="export-ranking">${icon("download")} Exportar CSV</button>
                 </div>
 
                 <section class="rank-overview" id="rank-overview">
@@ -124,7 +123,6 @@ export async function render(container) {
     }
 
     function bindShell() {
-        container.querySelector("#export-ranking")?.addEventListener("click", exportCsv);
         container.querySelector("#rk-change-country")?.addEventListener("click", () => {
             document.querySelector("[data-country-toggle]")?.click();
         });
@@ -609,30 +607,6 @@ export async function render(container) {
             subtitle: "Ficha de jugador · Radikal Ranking",
             content: playerModalContent(player)
         });
-    }
-
-    function exportCsv() {
-        const query = state.query.toLowerCase();
-        const list = state.view === "global"
-            ? (global?.top ? cleanRanking(global.top).filter((player) => !query || matchesQuery(player, query)) : [])
-            : filteredPlayers();
-        if (!list.length) return;
-        const rows = [
-            ["Rank", "Alias", "Nombre", "Apellidos", "Localidad", "Pais", "Juego", "Valor", "Member", "Official"],
-            ...list.map((p) => [
-                p.rank,
-                p.alias,
-                p.firstName,
-                p.lastName,
-                p.location,
-                p.countryCode,
-                p.game,
-                p.value,
-                p.premium ? "SI" : "NO",
-                p.officialPlayerType
-            ])
-        ];
-        downloadCsv(`radikal-ranking-${state.game}-${state.country}.csv`, rows);
     }
 
     function showError(error) {

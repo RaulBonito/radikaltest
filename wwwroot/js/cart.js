@@ -1,5 +1,5 @@
-import { api } from "./api.js?v=77";
-import { formatNumber, toast } from "./ui.js?v=77";
+import { api } from "./api.js?v=79";
+import { formatNumber, toast } from "./ui.js?v=78";
 
 const OFFICIAL_CART = "https://esp.radikalplayers.com/shop/cart.php";
 const listeners = new Set();

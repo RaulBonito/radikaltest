@@ -1,5 +1,5 @@
-import { api } from "../api.js?v=77";
-import { esc, icon, formatRelative, formatDate, emptyState, formatNumber, toast } from "../ui.js?v=77";
+import { api } from "../api.js?v=79";
+import { esc, icon, formatRelative, formatDate, emptyState, formatNumber, toast } from "../ui.js?v=78";
 import {
     boardSvg,
     dartRegion,
@@ -10,7 +10,7 @@ import {
     normalizeDart,
     playerColor,
     summarizeDarts
-} from "../dartboard.js?v=77";
+} from "../dartboard.js?v=78";
 
 const PLAYBACK_SPEEDS = [1, 2, 4];
 const PLAYBACK_BASE_MS = 1100;
@@ -146,7 +146,6 @@ export async function render(container, params = []) {
                         ${recording.gameType ? `<span class="chip chip-type">${esc(recording.gameType)}</span>` : ""}
                         <button class="btn btn-outline btn-sm" id="recording-refresh" type="button">${icon("refresh")} Sincronizar</button>
                         <a class="btn btn-outline btn-sm" href="#/directo/partidas/${competitionId}/${matchId}/${game}/avanzado">${icon("list")} Avanzado</a>
-                        <a class="btn btn-outline btn-sm" href="${esc(api.recordingCsvUrl(competitionId, matchId, game))}" download>${icon("download")} CSV</a>
                         <a class="btn btn-ghost btn-sm" href="#/directo/finalizadas">${icon("arrowLeft")} Finalizadas</a>
                         ${!recording.isMock
                             ? `<button class="btn btn-ghost btn-sm" id="recording-delete" type="button">${icon("trash")} Borrar</button>`
