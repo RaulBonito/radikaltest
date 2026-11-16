@@ -638,16 +638,58 @@ public sealed class RadikalClient
         return await http.GetAsync($"shop/mediapreview.php?productmedia_id={mediaId}", ct);
     }
 
-    public async Task<HomeDto> GetHomeAsync(CancellationToken ct = default)
+    public Task<HomeDto> GetHomeAsync(CancellationToken ct = default)
+        => CachedAsync("home:aggregate", TimeSpan.FromSeconds(20), BuildHomeAsync, ct);
+
+    private async Task<HomeDto> BuildHomeAsync(CancellationToken ct)
     {
-        var rankingTask = GetRankingAsync("724", null, "MPR", "aa", "0", ct);
-        var competitionsTask = GetCompetitionsAsync("724", null, null, null, "0", "0", 0, 0, 0, null, false, 1, 60, ct);
-        var upcomingTask = GetCompetitionsAsync("724", null, null, null, "0", "upcoming", 0, 0, 0, null, false, 1, 12, ct);
-        var placesTask = GetTopPlacesAsync(ct);
-        var newsTask = GetNewsAsync(1, 4, ct);
-        var liveTask = GetLiveAsync(ct);
-        var officialTask = GetOfficialPlayersAsync(ct);
-        var dianasTask = GetDianasAsync(ct);
+        // El inicio no debe fallar entero porque una sección tarde o no responda. Se da un
+        // presupuesto común y cada sección cae a un valor vacío de forma independiente.
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(8));
+        var token = timeout.Token;
+        var now = DateTimeOffset.UtcNow;
+
+        var rankingTask = WithFallbackAsync(
+            GetRankingAsync("724", null, "MPR", "aa", "0", token),
+            new RankingResultDto("724", null, "MPR", "aa", "0", now, Array.Empty<RankingPlayerDto>()),
+            "ranking",
+            ct);
+        var competitionsTask = WithFallbackAsync(
+            GetCompetitionsAsync("724", null, null, null, "0", "0", 0, 0, 0, null, false, 1, 60, token),
+            new CompetitionListDto(0, 1, 60, 0, now, Array.Empty<CompetitionSummaryDto>()),
+            "competiciones",
+            ct);
+        var upcomingTask = WithFallbackAsync(
+            GetCompetitionsAsync("724", null, null, null, "0", "upcoming", 0, 0, 0, null, false, 1, 12, token),
+            new CompetitionListDto(0, 1, 12, 0, now, Array.Empty<CompetitionSummaryDto>()),
+            "próximas competiciones",
+            ct);
+        var placesTask = WithFallbackAsync(
+            GetTopPlacesAsync(token),
+            (IReadOnlyList<TopPlaceDto>)Array.Empty<TopPlaceDto>(),
+            "lugares",
+            ct);
+        var newsTask = WithFallbackAsync(
+            GetNewsAsync(1, 4, token),
+            new NewsListDto(1, 4, 0, Array.Empty<NewsItemDto>()),
+            "noticias",
+            ct);
+        var liveTask = WithFallbackAsync(
+            GetLiveAsync(token),
+            new LiveStatusDto(false, "Sin directo ahora", Array.Empty<LiveCompetitionDto>(), now),
+            "directo",
+            ct);
+        var officialTask = WithFallbackAsync(
+            GetOfficialPlayersAsync(token),
+            new OfficialPlayerListDto(0, new Dictionary<string, int>(), Array.Empty<OfficialPlayerDto>()),
+            "official players",
+            ct);
+        var dianasTask = WithFallbackAsync(
+            GetDianasAsync(token),
+            new DianaListDto(0, new Dictionary<string, int>(), Array.Empty<DianaMachineDto>()),
+            "dianas",
+            ct);
 
         await Task.WhenAll(rankingTask, competitionsTask, upcomingTask, placesTask, newsTask, liveTask, officialTask, dianasTask);
 
@@ -683,6 +725,23 @@ public sealed class RadikalClient
                 TopPlayers: ranking.Players.Count,
                 Competitions: competitions.Total),
             DateTimeOffset.UtcNow);
+    }
+
+    private async Task<T> WithFallbackAsync<T>(
+        Task<T> task,
+        T fallback,
+        string section,
+        CancellationToken requestToken)
+    {
+        try
+        {
+            return await task;
+        }
+        catch (Exception exception) when (!requestToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(exception, "No se pudo cargar {Section} del inicio; se usa un valor vacío", section);
+            return fallback;
+        }
     }
 
     public async Task<IReadOnlyList<SearchResultDto>> SearchAsync(string query, CancellationToken ct = default)

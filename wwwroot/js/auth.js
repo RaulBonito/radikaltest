@@ -2,6 +2,8 @@ import { api } from "./api.js?v=79";
 import { esc, icon, openModal, toast, avatarHtml, officialBadge } from "./ui.js?v=78";
 
 let current = null;
+let refreshing = null;
+let authChecked = false;
 
 export function getCurrentPlayer() {
     return current;
@@ -20,6 +22,24 @@ export async function refreshAuth() {
     }
     updateHeaderAuth();
     return current;
+}
+
+/**
+ * Espera a la primera comprobación de sesión. Evita que las vistas pidan endpoints
+ * autenticados (y generen un 401 en consola) antes de saber si hay sesión.
+ */
+export function authReady() {
+    if (current) return Promise.resolve(current);
+    if (authChecked) return Promise.resolve(null);
+    if (!refreshing) {
+        refreshing = refreshAuth()
+            .catch(() => null)
+            .finally(() => {
+                refreshing = null;
+                authChecked = true;
+            });
+    }
+    return refreshing;
 }
 
 function updateNavUser() {
@@ -171,6 +191,7 @@ export async function logout() {
         // cerramos igualmente en local
     }
     current = null;
+    authChecked = true;
     updateHeaderAuth();
     toast("Sesión cerrada");
     window.location.hash = "#/";

@@ -53,7 +53,12 @@ public static class AuthEndpoints
         {
             var sessionId = context.Session.GetString(SessionKey);
             var profile = await service.GetSessionProfileAsync(sessionId, refresh ?? false, ct);
-            return profile is null ? Results.Unauthorized() : Results.Ok(profile);
+
+            // Es una comprobación de sesión, no un recurso protegido: sin sesión se
+            // devuelve 200 + null para no ensuciar la consola con un 401 esperado.
+            return profile is null
+                ? Results.Text("null", "application/json")
+                : Results.Ok(profile);
         });
 
         auth.MapPost("/logout", async (

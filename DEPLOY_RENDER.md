@@ -43,9 +43,29 @@ Añade estas variables en **Environment**:
 | `Radikal__ViewerBaseUrl` | `https://www.radikalplayers.com/` |
 | `Radikal__TimeoutSeconds` | `35` |
 | `Radikal__UseFallbackData` | `true` |
+| `DATA_PROTECTION_KEY_FILE` | Opcional; solo si usas una clave propia |
 
 Render inyecta `PORT` automáticamente. La aplicación ya lo lee y escucha en
 `http://0.0.0.0:PORT`. No hace falta definir `PORT` a mano.
+
+### Claves de sesión
+
+La aplicación incluye una key ring estable en el propio binario
+(`Radikal/DataProtection/fallback-key.xml`). Al arrancar la escribe en
+`APP_DATA_PATH/dataprotection-keys`, así que las cookies de sesión se pueden
+descifrar aunque Render use un disco efímero. **No hace falta configurar nada.**
+
+Si prefieres usar una clave propia (recomendado si el repositorio es público),
+puedes sobrescribirla con:
+
+- `DATA_PROTECTION_KEY_FILE=/etc/secrets/dataprotection-key.xml` y un Secret File.
+- `DATA_PROTECTION_KEY_XML` con el XML en claro o en base64.
+
+La clave incluida por defecto evita el error:
+
+```text
+The key {…} was not found in the key ring
+```
 
 ## 4. Disco persistente (recomendado)
 
@@ -120,9 +140,12 @@ Now listening on: http://0.0.0.0:10000
 
 ### La web carga pero el login no mantiene la sesión
 
-La sesión se guarda en memoria. Se pierde al reiniciar el servicio. En Render
-debe haber **una sola instancia**. Si necesitas varias instancias, habría que
-mover sesiones y datos a un almacén compartido.
+Con la key ring estable configurada, las cookies ya se pueden descifrar después
+de un reinicio. Aun así, el contenido de la sesión (los datos de Radikal) sigue
+en memoria y se pierde al reiniciar o cuando el plan Free se suspende por
+inactividad. En ese caso hay que volver a iniciar sesión; no es el error de la
+key ring. En Render debe haber **una sola instancia**. Si necesitas varias,
+habría que mover sesiones y datos a un almacén compartido.
 
 ### Se pierden datos tras un deploy
 

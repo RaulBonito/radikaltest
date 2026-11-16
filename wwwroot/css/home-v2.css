@@ -567,3 +567,33 @@
     .home-shortcut-copy strong { font-size: 0.5rem; }
     .home-now-head .chip { display: none; }
 }
+
+/* Aviso compacto cuando el inicio se ha cargado con secciones vacías. */
+.home-status-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 0.62rem;
+}
+.home-status-note > svg {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: var(--brand);
+    stroke-width: 1.8;
+}
+.home-status-note .btn {
+    margin-left: auto;
+    flex: 0 0 auto;
+}
+@media (max-width: 600px) {
+    .home-status-note { font-size: 0.56rem; padding: 7px 8px; }
+    .home-status-note .btn { min-height: 26px; padding: 0 7px; font-size: 0.5rem; }
+}

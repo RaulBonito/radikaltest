@@ -4,7 +4,7 @@ import {
 } from "../ui.js?v=78";
 import { playerModalContent, cleanRanking, countryFlagHtml } from "../components.js?v=77";
 import { countryName, getCountry, setCountry, subscribeCountry } from "../preferences.js?v=77";
-import { getCurrentPlayer } from "../auth.js?v=81";
+import { getCurrentPlayer } from "../auth.js?v=82";
 
 const DIANAS = [
     { code: "aa", label: "Ancho" },

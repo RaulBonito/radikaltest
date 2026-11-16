@@ -1,7 +1,7 @@
 import { api } from "../api.js?v=79";
 import { esc, icon, avatarHtml, formatNumber, toast } from "../ui.js?v=78";
 import { playerColor, normalizeDart, hitLabel, hitKind } from "../dartboard.js?v=78";
-import { getCurrentPlayer, openLoginModal } from "../auth.js?v=81";
+import { getCurrentPlayer, openLoginModal } from "../auth.js?v=82";
 
 const SPEEDS = [1, 2, 4];
 const BASE_DART_MS = 950;

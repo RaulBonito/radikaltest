@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.StaticFiles;
@@ -17,6 +18,84 @@ if (!string.IsNullOrWhiteSpace(renderPort) && int.TryParse(renderPort, out var p
 {
     builder.WebHost.UseUrls($"http://0.0.0.0:{portNumber}");
 }
+
+// Las claves de Data Protection deben sobrevivir a reinicios y despliegues. La app incluye
+// una key ring de respaldo en el propio binario, así que las cookies de sesión se pueden
+// descifrar aunque el hosting use un disco efímero. DATA_PROTECTION_KEY_FILE o
+// DATA_PROTECTION_KEY_XML permiten sustituirla por una clave propia.
+var appDataPath = AppDataPaths.Resolve(builder.Environment, builder.Configuration);
+var dataProtectionKeysPath = Path.Combine(appDataPath, "dataprotection-keys");
+Directory.CreateDirectory(dataProtectionKeysPath);
+
+void WriteDataProtectionKeyRing(string xml)
+{
+    var keyId = System.Text.RegularExpressions.Regex.Match(xml, "<key\\s+id=\"([^\"]+)\"");
+    if (!keyId.Success) return;
+
+    var keyPath = Path.Combine(dataProtectionKeysPath, $"key-{keyId.Groups[1].Value}.xml");
+    if (!File.Exists(keyPath))
+        File.WriteAllText(keyPath, xml);
+}
+
+var keyXml = builder.Configuration["DataProtection:KeyXml"];
+var keyFile = builder.Configuration["DataProtection:KeyFile"];
+if (string.IsNullOrWhiteSpace(keyXml))
+    keyXml = Environment.GetEnvironmentVariable("DATA_PROTECTION_KEY_XML");
+if (string.IsNullOrWhiteSpace(keyFile))
+    keyFile = Environment.GetEnvironmentVariable("DATA_PROTECTION_KEY_FILE");
+
+if (string.IsNullOrWhiteSpace(keyXml) && !string.IsNullOrWhiteSpace(keyFile) && File.Exists(keyFile))
+{
+    try
+    {
+        keyXml = File.ReadAllText(keyFile);
+    }
+    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+    {
+        keyXml = null;
+    }
+}
+
+if (!string.IsNullOrWhiteSpace(keyXml))
+{
+    var xml = keyXml.Trim();
+    if (!xml.StartsWith('<'))
+    {
+        try
+        {
+            xml = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(xml));
+        }
+        catch (FormatException)
+        {
+            xml = string.Empty;
+        }
+    }
+
+    WriteDataProtectionKeyRing(xml);
+}
+
+// Si no hay clave externa (o no era válida), se usa la key ring incluida en el binario.
+if (!Directory.EnumerateFiles(dataProtectionKeysPath, "key-*.xml").Any())
+{
+    var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+    var resourceName = assembly.GetManifestResourceNames()
+        .FirstOrDefault(name => name.EndsWith("fallback-key.xml", StringComparison.OrdinalIgnoreCase));
+
+    if (resourceName is not null)
+    {
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream is not null)
+        {
+            using var reader = new StreamReader(stream);
+            WriteDataProtectionKeyRing(reader.ReadToEnd());
+        }
+    }
+}
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
+    .SetApplicationName("RadikalPlayers")
+    .SetDefaultKeyLifetime(TimeSpan.FromDays(3650));
 
 builder.Services.Configure<RadikalOptions>(builder.Configuration.GetSection("Radikal"));
 builder.Services.AddMemoryCache();
@@ -87,8 +166,16 @@ var app = builder.Build();
 AppDataPaths.EnsureSeeded(app.Environment, app.Configuration, app.Logger);
 app.Logger.LogInformation(
     "Datos de la aplicación: {DataPath} (semilla: {SeedPath})",
-    AppDataPaths.Resolve(app.Environment, app.Configuration),
+    appDataPath,
     AppDataPaths.SeedDirectory(app.Environment));
+app.Logger.LogInformation("Claves de sesión: {KeysPath}", dataProtectionKeysPath);
+var hasKeyRing = Directory.EnumerateFiles(dataProtectionKeysPath, "key-*.xml").Any();
+if (!hasKeyRing && !app.Environment.IsDevelopment())
+{
+    app.Logger.LogWarning(
+        "Data Protection sin clave estable. Configura DATA_PROTECTION_KEY_FILE o DATA_PROTECTION_KEY_XML " +
+        "para que las sesiones sobrevivan a reinicios y despliegues.");
+}
 
 app.UseForwardedHeaders();
 if (!app.Environment.IsDevelopment())

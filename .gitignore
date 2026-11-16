@@ -99,6 +99,7 @@ App_Data/flags/
 App_Data/media/
 App_Data/official-media/
 App_Data/chat/
+App_Data/dataprotection-keys/
 App_Data/shared-ratings.json
 App_Data/**/*.tmp
 App_Data/**/*.bak

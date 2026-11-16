@@ -22,6 +22,9 @@ services:
         value: "35"
       - key: Radikal__UseFallbackData
         value: "true"
+      # Data Protection ya incluye una key ring estable en el binario. No hace falta
+      # configurar secretos para que las cookies sobrevivan a reinicios. Para usar una
+      # clave propia, define DATA_PROTECTION_KEY_FILE o DATA_PROTECTION_KEY_XML.
 
 # Para conservar chat, grabaciones, medias compartidas y cachés entre despliegues:
 #   1. Cambia plan: free por plan: starter.

@@ -27,6 +27,8 @@ public sealed class CacheWarmupService : BackgroundService
             await _client.GetProvincesAsync("724", stoppingToken), stoppingToken);
 
         await Task.WhenAll(
+            WarmAsync("inicio", async () =>
+                await _client.GetHomeAsync(stoppingToken), stoppingToken),
             WarmAsync("catálogo", async () =>
                 await _client.GetCompetitionCatalogAsync("724", "0", "0", "0", "0", "0", 0, 0, 0, stoppingToken), stoppingToken),
             WarmAsync("top places", async () =>

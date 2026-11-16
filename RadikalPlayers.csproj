@@ -12,6 +12,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Key ring de Data Protection incluida en el binario. Garantiza que las cookies de
+         sesión se puedan descifrar aunque el hosting use un disco efímero. Se puede
+         sobrescribir con DATA_PROTECTION_KEY_FILE o DATA_PROTECTION_KEY_XML. -->
+    <EmbeddedResource Include="Radikal\DataProtection\fallback-key.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Datos de ejemplo que se copian a APP_DATA_PATH en el primer arranque.
          No se publican shared-ratings.json ni chats locales. -->
     <Content Update="App_Data\live-recordings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

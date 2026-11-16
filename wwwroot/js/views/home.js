@@ -1,5 +1,6 @@
 import { api } from "../api.js?v=79";
 import { esc, icon, formatNumber, avatarHtml } from "../ui.js?v=78";
+import { authReady } from "../auth.js?v=82";
 import { competitionCard, cleanRanking } from "../components.js?v=77";
 import { ambientVideo, observeAmbientVideos } from "../media.js?v=77";
 
@@ -24,13 +25,14 @@ export async function render(container) {
     try {
         const [data, area] = await Promise.all([
             api.home(),
-            api.playerArea().catch(() => null)
+            authReady().then((player) => (player ? api.playerArea().catch(() => null) : null))
         ]);
 
         container.innerHTML = area
             ? memberView(data, area)
             : guestView(data);
 
+        container.querySelector("[data-home-retry]")?.addEventListener("click", () => render(container));
         disposeVideo = observeAmbientVideos(container);
         revealHome(container);
 
@@ -81,10 +83,30 @@ function loadingView() {
    Visitante / socio
    ===================================================================== */
 
+function homeStatus(data) {
+    const stats = data.stats || {};
+    const hasContent = (data.competitions?.length || 0) > 0 ||
+        (data.news?.length || 0) > 0 ||
+        (data.places?.length || 0) > 0 ||
+        (stats.dianas || 0) > 0 ||
+        (stats.competitions || 0) > 0 ||
+        (stats.officialPlayers || 0) > 0;
+
+    if (hasContent) return "";
+    return `
+        <div class="home-status-note">
+            ${icon("info")}
+            <span>No se pudieron actualizar los datos del inicio ahora mismo.</span>
+            <button class="btn btn-ghost btn-sm" type="button" data-home-retry>Reintentar</button>
+        </div>
+    `;
+}
+
 function guestView(data) {
     return `
         ${guestHero(data)}
         <div class="page container home-page">
+            ${homeStatus(data)}
             ${quickLinks(data)}
             ${nowSection(data)}
             ${agendaSection(data)}
@@ -99,6 +121,7 @@ function memberView(data, area) {
     return `
         ${memberHero(data, area)}
         <div class="page container home-page">
+            ${homeStatus(data)}
             ${quickLinks(data)}
             ${memberNext(area)}
             ${nowSection(data)}

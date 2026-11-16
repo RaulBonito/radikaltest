@@ -2,7 +2,7 @@ import { api } from "../api.js?v=79";
 import {
     esc, icon, avatarHtml, formatNumber, emptyState, openModal, toast, officialBadge
 } from "../ui.js?v=78";
-import { getCurrentPlayer, setCurrentPlayer, logout, openLoginModal } from "../auth.js?v=81";
+import { getCurrentPlayer, setCurrentPlayer, logout, openLoginModal } from "../auth.js?v=82";
 
 const TYPE_LABELS = {
     LIGA: "Liga",
