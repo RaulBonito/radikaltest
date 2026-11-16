@@ -25,6 +25,11 @@ services:
       # Data Protection ya incluye una key ring estable en el binario. No hace falta
       # configurar secretos para que las cookies sobrevivan a reinicios. Para usar una
       # clave propia, define DATA_PROTECTION_KEY_FILE o DATA_PROTECTION_KEY_XML.
+      #
+      # Si /api/diagnostics/upstream falla, Render no puede llegar a Radikal. Puedes
+      # enrutar las peticiones por un proxy:
+      # - key: Radikal__ProxyUrl
+      #   value: http://usuario:clave@host:puerto
 
 # Para conservar chat, grabaciones, medias compartidas y cachés entre despliegues:
 #   1. Cambia plan: free por plan: starter.

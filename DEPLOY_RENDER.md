@@ -147,6 +147,24 @@ inactividad. En ese caso hay que volver a iniciar sesión; no es el error de la
 key ring. En Render debe haber **una sola instancia**. Si necesitas varias,
 habría que mover sesiones y datos a un almacén compartido.
 
+### El inicio sale vacío y los logs muestran `HttpClient.Timeout`
+
+No es un fallo de sesión: Render no está pudiendo llegar a
+`esp.radikalplayers.com`. Abre:
+
+```text
+https://TU-SERVICIO.onrender.com/api/diagnostics/upstream
+```
+
+Si devuelve `ok: false` con `TaskCanceledException`, el problema es de red/egress
+(IP de datacenter bloqueada o inaccesible). La app admite un proxy:
+
+```text
+Radikal__ProxyUrl=http://usuario:clave@host:puerto
+```
+
+También puedes probar otra región o contactar con Radikal.
+
 ### Se pierden datos tras un deploy
 
 Falta el disco persistente o `APP_DATA_PATH` no apunta a `/var/data`.

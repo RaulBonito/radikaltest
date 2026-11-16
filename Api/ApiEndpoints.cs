@@ -1,4 +1,7 @@
+using System.Diagnostics;
 using System.Globalization;
+using System.Net;
+using System.Net.Sockets;
 using RadikalPlayers.Radikal;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
@@ -33,6 +36,56 @@ public static class ApiEndpoints
 
         api.MapGet("/home", async (RadikalClient client, CancellationToken ct) =>
             Results.Ok(await client.GetHomeAsync(ct)));
+
+        // Diagnóstico para comprobar si el hosting puede llegar a Radikal.
+        api.MapGet("/diagnostics/upstream", async (
+            IHttpClientFactory factory,
+            IConfiguration configuration,
+            CancellationToken ct) =>
+        {
+            var baseUrl = configuration["Radikal:EspBaseUrl"] ?? "https://esp.radikalplayers.com/";
+            var uri = new Uri(baseUrl);
+            var http = factory.CreateClient("radikal-esp");
+            http.Timeout = TimeSpan.FromSeconds(10);
+
+            string[] addresses;
+            try
+            {
+                addresses = (await Dns.GetHostAddressesAsync(uri.Host, AddressFamily.InterNetwork, ct))
+                    .Select(address => address.ToString())
+                    .ToArray();
+            }
+            catch (Exception exception)
+            {
+                addresses = new[] { $"DNS: {exception.GetType().Name}: {exception.Message}" };
+            }
+
+            var watch = Stopwatch.StartNew();
+            try
+            {
+                using var response = await http.GetAsync(uri, ct);
+                return Results.Ok(new
+                {
+                    baseUrl,
+                    addresses,
+                    ok = response.IsSuccessStatusCode,
+                    status = (int)response.StatusCode,
+                    ms = watch.ElapsedMilliseconds
+                });
+            }
+            catch (Exception exception)
+            {
+                return Results.Ok(new
+                {
+                    baseUrl,
+                    addresses,
+                    ok = false,
+                    ms = watch.ElapsedMilliseconds,
+                    error = exception.GetType().Name,
+                    message = exception.Message
+                });
+            }
+        });
 
         api.MapGet("/rankings", async (
             string? country,

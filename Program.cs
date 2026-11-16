@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.DataProtection;
@@ -108,7 +109,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 builder.Services.AddSession(options =>
 {
-    options.Cookie.Name = "radikal.area";
+    // Nombre nuevo: las cookies antiguas se ignoran y no provocan errores de key ring.
+    options.Cookie.Name = "radikal.session.v2";
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
@@ -139,9 +141,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 builder.Services.AddHttpClient("radikal-esp", (services, http) => ConfigureRadikalClient(services, http, useViewer: false))
-    .ConfigurePrimaryHttpMessageHandler(CreateHandler);
+    .ConfigurePrimaryHttpMessageHandler(services => CreateHandler(services.GetRequiredService<IConfiguration>()));
 builder.Services.AddHttpClient("radikal-www", (services, http) => ConfigureRadikalClient(services, http, useViewer: true))
-    .ConfigurePrimaryHttpMessageHandler(CreateHandler);
+    .ConfigurePrimaryHttpMessageHandler(services => CreateHandler(services.GetRequiredService<IConfiguration>()));
 builder.Services.AddHttpClient("flags", http =>
 {
     http.BaseAddress = new Uri("https://flagcdn.com/w80/");
@@ -168,9 +170,11 @@ app.Logger.LogInformation(
     "Datos de la aplicación: {DataPath} (semilla: {SeedPath})",
     appDataPath,
     AppDataPaths.SeedDirectory(app.Environment));
-app.Logger.LogInformation("Claves de sesión: {KeysPath}", dataProtectionKeysPath);
-var hasKeyRing = Directory.EnumerateFiles(dataProtectionKeysPath, "key-*.xml").Any();
-if (!hasKeyRing && !app.Environment.IsDevelopment())
+var keyFiles = Directory.EnumerateFiles(dataProtectionKeysPath, "key-*.xml")
+    .Select(Path.GetFileName)
+    .ToArray();
+app.Logger.LogInformation("Claves de sesión: {KeysPath} ({Keys})", dataProtectionKeysPath, string.Join(", ", keyFiles));
+if (keyFiles.Length == 0 && !app.Environment.IsDevelopment())
 {
     app.Logger.LogWarning(
         "Data Protection sin clave estable. Configura DATA_PROTECTION_KEY_FILE o DATA_PROTECTION_KEY_XML " +
@@ -236,6 +240,15 @@ app.UseStaticFiles(new StaticFileOptions
         }
     }
 });
+// Limpia la cookie de sesión antigua para que no quede dando vueltas en el navegador.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Cookies.ContainsKey("radikal.area"))
+        context.Response.Cookies.Delete("radikal.area");
+
+    await next();
+});
+
 app.UseSession();
 
 app.MapRadikalApi();
@@ -281,12 +294,62 @@ void ConfigureRadikalClient(IServiceProvider services, HttpClient http, bool use
     http.DefaultRequestHeaders.Referrer = http.BaseAddress;
 }
 
-static HttpMessageHandler CreateHandler() => new SocketsHttpHandler
+static HttpMessageHandler CreateHandler(IConfiguration configuration)
 {
-    AutomaticDecompression = DecompressionMethods.All,
-    PooledConnectionLifetime = TimeSpan.FromMinutes(10),
-    MaxConnectionsPerServer = 16
-};
+    var handler = new SocketsHttpHandler
+    {
+        AutomaticDecompression = DecompressionMethods.All,
+        PooledConnectionLifetime = TimeSpan.FromMinutes(10),
+        MaxConnectionsPerServer = 16
+    };
+
+    // Proxy opcional para hostings cuya IP no puede acceder a Radikal.
+    var proxyUrl = configuration["Radikal:ProxyUrl"]
+        ?? Environment.GetEnvironmentVariable("RADIKAL_PROXY_URL");
+    if (!string.IsNullOrWhiteSpace(proxyUrl))
+    {
+        handler.Proxy = new WebProxy(proxyUrl);
+        handler.UseProxy = true;
+        return handler;
+    }
+
+    // Sin proxy, fuerza IPv4 y limita el connect: en algunos hostings el intento IPv6
+    // se queda colgado hasta agotar el timeout completo de HttpClient.
+    handler.ConnectCallback = async (connection, cancellationToken) =>
+    {
+        var addresses = await Dns.GetHostAddressesAsync(
+            connection.DnsEndPoint.Host,
+            AddressFamily.InterNetwork,
+            cancellationToken);
+
+        Exception? lastError = null;
+        foreach (var address in addresses)
+        {
+            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+            {
+                NoDelay = true
+            };
+
+            try
+            {
+                using var attempt = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                attempt.CancelAfter(TimeSpan.FromSeconds(5));
+                await socket.ConnectAsync(new IPEndPoint(address, connection.DnsEndPoint.Port), attempt.Token);
+                return new NetworkStream(socket, ownsSocket: true);
+            }
+            catch (Exception exception)
+            {
+                socket.Dispose();
+                lastError = exception;
+            }
+        }
+
+        throw lastError ?? new HttpRequestException(
+            $"No se pudo resolver una dirección IPv4 para {connection.DnsEndPoint.Host}.");
+    };
+
+    return handler;
+}
 
 public partial class Program
 {
