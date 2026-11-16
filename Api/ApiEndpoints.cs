@@ -47,6 +47,19 @@ public static class ApiEndpoints
             var uri = new Uri(baseUrl);
             var http = factory.CreateClient("radikal-esp");
             http.Timeout = TimeSpan.FromSeconds(10);
+            var proxyConfigured = !string.IsNullOrWhiteSpace(
+                configuration["Radikal:ProxyUrl"] ?? Environment.GetEnvironmentVariable("RADIKAL_PROXY_URL"));
+
+            string? outboundIp = null;
+            try
+            {
+                using var ipClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+                outboundIp = (await ipClient.GetStringAsync("https://api.ipify.org", ct)).Trim();
+            }
+            catch
+            {
+                // Sin diagnóstico de IP saliente; el resto de la prueba sigue siendo válida.
+            }
 
             string[] addresses;
             try
@@ -68,6 +81,8 @@ public static class ApiEndpoints
                 {
                     baseUrl,
                     addresses,
+                    outboundIp,
+                    proxyConfigured,
                     ok = response.IsSuccessStatusCode,
                     status = (int)response.StatusCode,
                     ms = watch.ElapsedMilliseconds
@@ -79,6 +94,8 @@ public static class ApiEndpoints
                 {
                     baseUrl,
                     addresses,
+                    outboundIp,
+                    proxyConfigured,
                     ok = false,
                     ms = watch.ElapsedMilliseconds,
                     error = exception.GetType().Name,
