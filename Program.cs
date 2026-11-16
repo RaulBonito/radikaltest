@@ -306,9 +306,19 @@ static HttpMessageHandler CreateHandler(IConfiguration configuration)
     // Proxy opcional para hostings cuya IP no puede acceder a Radikal.
     var proxyUrl = configuration["Radikal:ProxyUrl"]
         ?? Environment.GetEnvironmentVariable("RADIKAL_PROXY_URL");
-    if (!string.IsNullOrWhiteSpace(proxyUrl))
+    if (!string.IsNullOrWhiteSpace(proxyUrl) &&
+        Uri.TryCreate(proxyUrl, UriKind.Absolute, out var proxyUri))
     {
-        handler.Proxy = new WebProxy(proxyUrl);
+        var proxy = new WebProxy(proxyUri);
+        if (!string.IsNullOrWhiteSpace(proxyUri.UserInfo))
+        {
+            var userInfo = proxyUri.UserInfo.Split(':', 2);
+            proxy.Credentials = new NetworkCredential(
+                Uri.UnescapeDataString(userInfo[0]),
+                userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty);
+        }
+
+        handler.Proxy = proxy;
         handler.UseProxy = true;
         return handler;
     }
